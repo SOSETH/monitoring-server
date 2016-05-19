@@ -1,0 +1,69 @@
+---
+  - name: Add debmon repository
+    apt_repository: repo='deb http://debmon.org/debmon debmon-jessie main' state=present
+    register: repochanged
+
+  - name: Add demon repository key
+    apt_key: url=http://debmon.org/debmon/repo.key state=present
+
+  - name: Explicitly refresh apt cache
+    apt: update_cache=yes
+    when: repochanged.changed
+
+  - name: Ensure apache2 is not installed
+    apt: name=apache2 state=absent
+
+  - name: Prevent apache2 from being installed
+    copy: src=noapache.conf dest=/etc/apt/preferences.d/noapache
+
+  - name: Install icinga
+    apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
+    with_items:
+      - icinga2
+      - icinga2-ido-mysql
+      - icingaweb2
+      - php5-fpm
+      - php5-imagick
+      - php5-intl
+
+  - name: Create database for icinga
+    mysql_db: login_host="{{ icinga_mysql_host }}" name=icinga state=present
+    register: dbcreated
+
+  - name: Create database for icinga
+    mysql_db: login_host="{{ icinga_mysql_host }}" name=icingaweb state=present
+
+  - name: Import icinga schema
+    shell: mysql -h {{ icinga_mysql_host }} icinga < /usr/share/icinga2-ido-mysql/schema/mysql.sql
+    when: dbcreated.changed
+
+  - name: Create database user for icinga
+    mysql_user: login_host="{{ icinga_mysql_host }}" name=icinga password="{{ icinga_mysql_password }}" priv="icinga.*:ALL"
+
+  - name: Create database user for icingaweb
+    mysql_user: login_host="{{ icinga_mysql_host }}" name=icingaweb password="{{ icinga_mysql_web_password }}" priv="icingaweb.*:ALL"
+
+  - name: Create icinga mysql config file
+    template: src=ido-mysql.conf.j2 dest=/etc/icinga2/features-available/ido-mysql.conf owner=root group=nagios mode=0640
+    notify: restart icinga
+
+    # Per default, at least /etc/icingaweb2/modules has wrong ownership
+  - name: Fix icingaweb directory ownership
+    file: path=/etc/icingaweb2 owner=www-data group=icingaweb2 recurse=yes
+
+  # Per default the socket is owned by nagios:www-run
+  - name: Enable icinga command module
+    command: icinga2 feature enable command creates=/etc/icinga2/features-enabled/command.conf
+    notify: restart icinga
+
+  - name: Create icinga nginx config file
+    template: src=nginx-dropin.conf.j2 dest=/etc/nginx/base.d/icinga.conf owner=root group=root mode=0644
+    notify: restart nginx
+
+  - name: Set php fpm default timezone
+    lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
+    notify: restart php-fpm
+
+  - name: Ensure that the fpm/web user can access the icinga socket
+    user: name=www-data append=yes groups="icingaweb2"
+    notify: restart php-fpm
