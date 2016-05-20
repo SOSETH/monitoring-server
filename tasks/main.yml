@@ -3,7 +3,7 @@
     apt_repository: repo='deb http://debmon.org/debmon debmon-jessie main' state=present
     register: repochanged
 
-  - name: Add demon repository key
+  - name: Add debmon repository key
     apt_key: url=http://debmon.org/debmon/repo.key state=present
 
   - name: Explicitly refresh apt cache
@@ -26,11 +26,21 @@
       - php5-imagick
       - php5-intl
 
+  # Per default the socket is owned by nagios:www-run
+  - name: Enable icinga modules
+    command: icinga2 feature enable {{ item }} creates=/etc/icinga2/features-enabled/{{ item }}.conf
+    notify: restart icinga
+    with_items:
+      - command
+      - perfdata
+      - graphite
+      - ido-mysql
+
   - name: Create database for icinga
     mysql_db: login_host="{{ icinga_mysql_host }}" name=icinga state=present
     register: dbcreated
 
-  - name: Create database for icinga
+  - name: Create database for icingaweb
     mysql_db: login_host="{{ icinga_mysql_host }}" name=icingaweb state=present
 
   - name: Import icinga schema
@@ -51,14 +61,20 @@
   - name: Fix icingaweb directory ownership
     file: path=/etc/icingaweb2 owner=www-data group=icingaweb2 recurse=yes
 
-  # Per default the socket is owned by nagios:www-run
-  - name: Enable icinga command module
-    command: icinga2 feature enable command creates=/etc/icinga2/features-enabled/command.conf
-    notify: restart icinga
-
   - name: Create icinga nginx config file
     template: src=nginx-dropin.conf.j2 dest=/etc/nginx/base.d/icinga.conf owner=root group=root mode=0644
     notify: restart nginx
+
+  - name: Create icinga config files
+    template: src={{item }}.j2 dest=/etc/icinga2/conf.d/{{item }} owner=root group=root mode=0644
+    notify: restart icinga
+    with_items:
+      - templates.conf
+      - services.conf
+
+  - name: Create icinga influxdb(graphite) config file
+    template: src=graphite.conf.j2 dest=/etc/icinga2/features-available/graphite.conf owner=root group=nagios mode=0640
+    notify: restart icinga
 
   - name: Set php fpm default timezone
     lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'

@@ -1,0 +1,13 @@
+/**
+ * The GraphiteWriter type writes check result metrics and
+ * performance data to a graphite tcp socket.
+ */
+
+library "perfdata"
+
+object GraphiteWriter "graphite" {
+  host = "{{ icinga_graphite_host }}"
+  port = {{ icinga_graphite_port }}
+  host_name_template = "icinga2.$host.name$.host.$host.check_command$"
+  service_name_template = "icinga2.$host.name$.service.$service.name$"
+}
