@@ -1,0 +1,17 @@
+object Endpoint "{{ icinga_master_fqdn }}" {
+}
+
+object Zone "{{ icinga_master_fqdn }}" {
+    // The "master" zone
+    endpoints = [ "{{ icinga_master_fqdn }}" ]
+}
+
+{% for item in groups['mon-client'] %}
+object Zone "{{ hostvars[item]['ansible_fqdn'] }}" {
+        endpoints = [ "{{ hostvars[item]['ansible_fqdn'] }}" ]
+        parent = "{{ icinga_master_fqdn }}"
+}
+
+object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
+}
+{% endfor %}

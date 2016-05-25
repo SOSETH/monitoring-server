@@ -25,6 +25,10 @@
       - php5-fpm
       - php5-imagick
       - php5-intl
+      - sysstat
+
+  - name: Concat CA and CRL
+    assemble: src=/etc/icinga2/pki/ca dest=/etc/icinga2/pki/ca-mag.crt
 
   # Per default the socket is owned by nagios:www-run
   - name: Enable icinga modules
@@ -35,6 +39,7 @@
       - perfdata
       - graphite
       - ido-mysql
+      - api
 
   - name: Create database for icinga
     mysql_db: login_host="{{ icinga_mysql_host }}" name=icinga state=present
@@ -53,10 +58,6 @@
   - name: Create database user for icingaweb
     mysql_user: login_host="{{ icinga_mysql_host }}" name=icingaweb password="{{ icinga_mysql_web_password }}" priv="icingaweb.*:ALL"
 
-  - name: Create icinga mysql config file
-    template: src=ido-mysql.conf.j2 dest=/etc/icinga2/features-available/ido-mysql.conf owner=root group=nagios mode=0640
-    notify: restart icinga
-
     # Per default, at least /etc/icingaweb2/modules has wrong ownership
   - name: Fix icingaweb directory ownership
     file: path=/etc/icingaweb2 owner=www-data group=icingaweb2 recurse=yes
@@ -71,10 +72,24 @@
     with_items:
       - templates.conf
       - services.conf
+      - commands.conf
+      - hosts.conf
 
-  - name: Create icinga influxdb(graphite) config file
-    template: src=graphite.conf.j2 dest=/etc/icinga2/features-available/graphite.conf owner=root group=nagios mode=0640
+  - name: Create icinga main configs
+    template: src={{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
     notify: restart icinga
+    with_items:
+      - icinga2.conf
+      - constants.conf
+      - zones.conf
+
+  - name: Configure icinga features
+    template: src={{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
+    notify: restart icinga
+    with_items:
+      - graphite.conf
+      - ido-mysql.conf
+      - api.conf
 
   - name: Set php fpm default timezone
     lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
@@ -83,3 +98,10 @@
   - name: Ensure that the fpm/web user can access the icinga socket
     user: name=www-data append=yes groups="icingaweb2"
     notify: restart php-fpm
+
+  - name: Manually install a few checks from contrib
+    copy: src="{{ item }}" dest="/usr/lib/nagios/plugins/{{ item }}" owner=root group=root mode=0755
+    notify: restart icinga
+    with_items:
+      - check_iostat
+      - check_mem.pl

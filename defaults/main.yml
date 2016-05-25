@@ -1,8 +1,11 @@
 ---
+icinga_base_url: "http://192.168.122.28"
 icinga_mysql_host: localhost
 icinga_mysql_password: "mmNE6bIZF5qjaHDC8jeP9pNRI0j6He6j"
 icinga_mysql_web_password: "mmNE6bIZF5qjaHDC8jeP9pNRI0j6He6j"
 icinga_graphite_host: localhost
 icinga_graphite_port: 2004
-icinga_grafana_base: "http://192.168.122.28/grafana"
-icinga_grafana_url: "http://192.168.122.28/grafana/dashboard-solo/db/new-dashboard?panelId=1&from=1463743145459&to=1463744045460&var-HOST=debian-vm_m_njsm_de&var-CHECK=load&var-METRIC=load1&theme=ligh"
+icinga_grafana_base: "{{ icinga_base_url }}/grafana"
+icinga_grafana_url: "{{ icinga_base_url }}/grafana/dashboard-solo/db/new-dashboard?panelId=1&from=1463743145459&to=1463744045460&var-HOST=debian-vm_m_njsm_de&var-CHECK=load&var-METRIC=load1&theme=ligh"
+icinga_master_fqdn: debian-vm.m.njsm.de
+icinga_default_checks: ["apt", "disk /", "disk", "icinga", "iostat", "load", "mem", "procs", "swap", "users"]

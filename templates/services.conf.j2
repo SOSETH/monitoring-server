@@ -52,16 +52,6 @@ apply Service "ssh" {
   assign where (host.address || host.address6) && host.vars.os == "Linux"
 }
 
-
-
-apply Service for (http_vhost => config in host.vars.http_vhosts) {
-  import "generic-service"
-
-  check_command = "http"
-
-  vars += config
-}
-
 apply Service for (disk => config in host.vars.disks) {
   import "generic-service"
 
@@ -77,17 +67,6 @@ apply Service "icinga" {
 
   assign where host.name == NodeName
 }
-
-/*apply Service "load" {
-  import "generic-service"
-
-  check_command = "load"*/
-
-  /* Used by the ScheduledDowntime apply rule in `downtimes.conf`. */
-  /*vars.backup_downtime = "02:00-03:00"
-
-  assign where host.name == NodeName
-}*/
 
 apply Service "procs" {
   import "generic-service"
@@ -109,6 +88,27 @@ apply Service "users" {
   import "generic-service"
 
   check_command = "users"
+
+  assign where host.name == NodeName
+}
+
+apply Service "mem" {
+  import "generic-service"
+
+  check_command = "mem"
+  vars.mem_used = true
+  vars.mem_cache = true
+  vars.mem_warning = 80
+  vars.mem_critical = 95
+
+  assign where host.name == NodeName
+}
+
+apply Service "iostat" {
+  import "generic-service"
+
+  check_command = "iostat"
+  vars.iostat_disk = "vda"
 
   assign where host.name == NodeName
 }
