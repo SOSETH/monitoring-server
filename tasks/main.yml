@@ -1,31 +1,18 @@
 ---
-  - name: Add debmon repository
-    apt_repository: repo='deb http://debmon.org/debmon debmon-jessie main' state=present
-    register: repochanged
-
-  - name: Add debmon repository key
-    apt_key: url=http://debmon.org/debmon/repo.key state=present
-
-  - name: Explicitly refresh apt cache
-    apt: update_cache=yes
-    when: repochanged.changed
-
   - name: Ensure apache2 is not installed
     apt: name=apache2 state=absent
 
   - name: Prevent apache2 from being installed
     copy: src=noapache.conf dest=/etc/apt/preferences.d/noapache
 
-  - name: Install icinga
+  - name: Install additional icinga packages
     apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
     with_items:
-      - icinga2
       - icinga2-ido-mysql
       - icingaweb2
       - php5-fpm
       - php5-imagick
       - php5-intl
-      - sysstat
 
   - name: Concat CA and CRL
     assemble: src=/etc/icinga2/pki/ca dest=/etc/icinga2/pki/ca-mag.crt
@@ -72,9 +59,6 @@
     notify: restart icinga
     with_items:
       - templates.conf
-      - services.conf
-      - commands.conf
-      - hosts.conf
 
   - name: Create icinga main configs
     template: src={{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
@@ -104,10 +88,3 @@
   - name: Ensure that the fpm/web user can access the icinga socket
     user: name=www-data append=yes groups="icingaweb2"
     notify: restart php-fpm
-
-  - name: Manually install a few checks from contrib
-    copy: src="{{ item }}" dest="/usr/lib/nagios/plugins/{{ item }}" owner=root group=root mode=0755
-    notify: restart icinga
-    with_items:
-      - check_iostat
-      - check_mem.pl
