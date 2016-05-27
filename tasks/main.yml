@@ -29,6 +29,7 @@
 
   - name: Concat CA and CRL
     assemble: src=/etc/icinga2/pki/ca dest=/etc/icinga2/pki/ca-mag.crt
+    changed_when: False
 
   # Per default the socket is owned by nagios:www-run
   - name: Enable icinga modules
@@ -90,6 +91,11 @@
       - graphite.conf
       - ido-mysql.conf
       - api.conf
+
+  - name: Configure client hosts
+    template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
+    notify: restart icinga
+    with_items: "{{ groups['mon-client'] }}"
 
   - name: Set php fpm default timezone
     lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'

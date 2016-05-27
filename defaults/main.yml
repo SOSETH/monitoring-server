@@ -7,4 +7,4 @@ icinga_graphite_host: localhost
 icinga_graphite_port: 2004
 icinga_grafana_base: "{{ icinga_base_url }}/grafana"
 icinga_master_fqdn: mon.sos.ethz.ch
-icinga_default_checks: ["apt", "disk /", "disk", "icinga", "iostat", "load", "mem", "procs", "swap", "users"]
+icinga_default_checks: ["apt", "disk /", "disk", "icinga", "iostat", "load", "mem", "procs", "users"]

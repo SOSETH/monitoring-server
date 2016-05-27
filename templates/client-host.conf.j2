@@ -1,0 +1,33 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * Host {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
+  import "satellite-host"
+  check_command = "cluster-zone"
+
+  /* Specify the address attributes for checks e.g. `ssh` or `http`. */
+  address = "{{ hostvars[item]['ansible_default_ipv4']['address'] }}"
+  {% if hostvars[item]['ansible_default_ipv6'] %}
+  {% if hostvars[item]['ansible_default_ipv6']['address'].startswith('2001') %}
+  address6 = "{{ hostvars[item]['ansible_default_ipv6']['address'] }}"
+  {% endif %}
+  {% endif %}
+
+  /* Set custom attribute `os` for hostgroup assignment in `groups.conf`. */
+  vars.os = "Linux"
+
+  /* Define notification mail attributes for notification apply rules in `notifications.conf`. */
+  vars.notification["mail"] = {
+    /* The UserGroup `icingaadmins` is defined in `users.conf`. */
+    groups = [ "icingaadmins" ]
+  }
+}
+/* * * * * * * * * * * * * Services * * * * * * * * * * * * * * * * * */
+{% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
+object Service "{{ item2 }}" {
+        import "satellite-service"
+        check_command = "dummy"
+        host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+        zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+}
+{% endfor %}
