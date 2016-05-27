@@ -27,7 +27,11 @@ object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
 object Service "{{ item2 }}" {
         import "satellite-service"
         check_command = "dummy"
+{% if (item2|match('ipmi .*')) %}
+        host_name = "{{ item2|regex_replace('^ipmi (.*)$', '\\1') }}"
+{% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+{% endif %}
         zone = "{{ hostvars[item]['ansible_fqdn'] }}"
 }
 {% endfor %}
