@@ -59,6 +59,8 @@
     notify: restart icinga
     with_items:
       - templates.conf
+      - notifications.conf.j2
+      - users.conf.j2
 
   - name: Create icinga main configs
     template: src={{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
