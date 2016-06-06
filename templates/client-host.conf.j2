@@ -29,9 +29,26 @@ object Service "{{ item2 }}" {
         check_command = "dummy"
 {% if (item2|match('ipmi .*')) %}
         host_name = "{{ item2|regex_replace('^ipmi (.*)$', '\\1') }}"
+{% elif (item2|match('power .*')) %}
+        host_name = "{{ item2|regex_replace('^power (.*)$', '\\1') }}"
 {% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
 {% endif %}
         zone = "{{ hostvars[item]['ansible_fqdn'] }}"
 }
+{% endfor %}
+
+{% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
+{% if (item2|match('power .*')) %}
+
+/* * * * * * * * * * * * * VHost * * * * * * * * * * * * * * * * * */
+object Host "{{ item2|regex_replace('^power (.*)$', '\\1') }}" {
+  check_command = "dummy"
+  /* Define notification mail attributes for notification apply rules in `notifications.conf`. */
+  vars.notification["mail"] = {
+    /* The UserGroup `icingaadmins` is defined in `users.conf`. */
+    groups = [ "icingaadmins" ]
+  }
+}
+{% endif %}
 {% endfor %}
