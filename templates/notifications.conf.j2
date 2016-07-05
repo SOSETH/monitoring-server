@@ -11,11 +11,7 @@
 apply Notification "mail-icingaadmin" to Host {
   import "mail-host-notification"
 
-  if (host.vars.notification_interval) {
-    interval = host.vars.notification_interval
-  } else {
-    interval = 6h
-  }
+  interval = 6h
 
   if (host.vars.notification_period) {
     period = host.vars.notification_period
@@ -29,6 +25,8 @@ apply Notification "mail-icingaadmin" to Host {
 
 apply Notification "mail-icingaadmin" to Service {
   import "mail-service-notification"
+
+  interval = 6h
 
   user_groups = host.vars.notification.mail.groups
   users = host.vars.notification.mail.users
