@@ -62,14 +62,6 @@
       - notifications.conf
       - users.conf
 
-  - name: Create icinga main configs
-    template: src={{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
-    notify: restart icinga
-    with_items:
-      - icinga2.conf
-      - constants.conf
-      - zones.conf
-
   - name: Configure icinga features
     template: src={{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
     notify: restart icinga
@@ -82,6 +74,25 @@
     template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
     notify: restart icinga
     with_items: "{{ groups['mon-client'] }}"
+
+  - name: Configure fake hosts for IB switches
+    template: src=client-host-ib.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
+    notify: restart icinga
+    with_items: "{{ icinga_fake_clients_ib }}"
+    when: icinga_fake_clients_ib is defined
+
+  - name: Configure no fake hosts for IB switches
+    set_fact:
+      icinga_fake_clients_ib: []
+    when: icinga_fake_clients_ib is not defined
+
+  - name: Create icinga main configs
+    template: src={{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
+    notify: restart icinga
+    with_items:
+      - icinga2.conf
+      - constants.conf
+      - zones.conf
 
   - name: Set php fpm default timezone
     lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'

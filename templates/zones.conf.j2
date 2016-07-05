@@ -15,3 +15,13 @@ object Zone "{{ hostvars[item]['ansible_fqdn'] }}" {
 object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
 }
 {% endfor %}
+
+{% for item in icinga_fake_clients_ib %}
+object Zone "{{ item }}" {
+        endpoints = [ "{{ item }}" ]
+        parent = "{{ icinga_master_fqdn }}"
+}
+
+object Endpoint "{{ item }}" {
+}
+{% endfor %}

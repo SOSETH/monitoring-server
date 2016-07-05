@@ -31,6 +31,8 @@ object Service "{{ item2 }}" {
         host_name = "{{ item2|regex_replace('^ipmi (.*)$', '\\1') }}"
 {% elif (item2|match('power .*')) %}
         host_name = "{{ item2|regex_replace('^power (.*)$', '\\1') }}"
+{% elif (item2|match('infiniband .*')) %}
+        host_name = "{{ item2|regex_replace('^infiniband (.*)$', '\\1') }}"
 {% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
 {% endif %}
