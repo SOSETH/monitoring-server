@@ -36,6 +36,9 @@ object Service "{{ item2 }}" {
 {% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
 {% endif %}
+{% if (item2|match('apt.*')) %}
+        vars.interval = 7d
+{% endif %}
         zone = "{{ hostvars[item]['ansible_fqdn'] }}"
 }
 {% endfor %}
