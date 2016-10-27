@@ -21,23 +21,34 @@ object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
     /* The UserGroup `icingaadmins` is defined in `users.conf`. */
     groups = [ "icingaadmins" ]
   }
+
+  {% if 'is_client' in hostvars[item] %}
+  vars.is_client = true
+  {% endif %}
 }
 /* * * * * * * * * * * * * Services * * * * * * * * * * * * * * * * * */
 {% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
+{% if (item2|match('http .*')) %}
+object Service "http {{ item }}" {
+{% elif (item2|match('https .*')) %}
+object Service "https {{ item }}" {
+{% else %}
 object Service "{{ item2 }}" {
+{% endif %}
         import "satellite-service"
         check_command = "dummy"
 {% if (item2|match('ipmi .*')) %}
         host_name = "{{ item2|regex_replace('^ipmi (.*)$', '\\1') }}"
+{% elif (item2|match('http .*')) %}
+        host_name = "{{ item2|regex_replace('^http (.*)$', '\\1') }}"
+{% elif (item2|match('https .*')) %}
+        host_name = "{{ item2|regex_replace('^https (.*)$', '\\1') }}"
 {% elif (item2|match('power .*')) %}
         host_name = "{{ item2|regex_replace('^power (.*)$', '\\1') }}"
 {% elif (item2|match('infiniband .*')) %}
         host_name = "{{ item2|regex_replace('^infiniband (.*)$', '\\1') }}"
 {% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-{% endif %}
-{% if (item2|match('apt.*')) %}
-        vars.interval = 7d
 {% endif %}
         zone = "{{ hostvars[item]['ansible_fqdn'] }}"
 }
@@ -55,5 +66,28 @@ object Host "{{ item2|regex_replace('^power (.*)$', '\\1') }}" {
     groups = [ "icingaadmins" ]
   }
 }
+{% endif %}
+{% endfor %}
+
+{% set websites_found = [] %}
+{% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
+{% if (item2|match('http .*')) %}
+{% set item_name=item2|regex_replace('^http (.*)$', '\\1') %}
+{% if item_name not in websites_found %}
+/* * * * * * * * * * * * * VHost * * * * * * * * * * * * * * * * * */
+{% if item_name not in groups['mon-client'] %}
+{% if item_name not in groups['mon-server'] %}
+object Host "{{ item_name }}" {
+  check_command = "dummy"
+  /* Define notification mail attributes for notification apply rules in `notifications.conf`. */
+  vars.notification["mail"] = {
+    /* The UserGroup `icingaadmins` is defined in `users.conf`. */
+    groups = [ "icingaadmins" ]
+  }
+}
+{% endif %}
+{% endif %}
+{% set websites_found = websites_found|join(item_name) %}
+{% endif %}
 {% endif %}
 {% endfor %}
