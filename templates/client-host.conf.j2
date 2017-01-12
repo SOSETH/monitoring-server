@@ -1,4 +1,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * Zone {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+object Zone "{{ hostvars[item]['ansible_fqdn'] }}" {
+        endpoints = [ "{{ hostvars[item]['ansible_fqdn'] }}" ]
+        parent = "{{ icinga_master_fqdn }}"
+}
+
+object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * Host {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 object Host "{{ hostvars[item]['ansible_fqdn'] }}" {

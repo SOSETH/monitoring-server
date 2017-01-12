@@ -5,23 +5,3 @@ object Zone "{{ icinga_master_fqdn }}" {
     // The "master" zone
     endpoints = [ "{{ icinga_master_fqdn }}" ]
 }
-
-{% for item in groups['mon-client'] %}
-object Zone "{{ hostvars[item]['ansible_fqdn'] }}" {
-        endpoints = [ "{{ hostvars[item]['ansible_fqdn'] }}" ]
-        parent = "{{ icinga_master_fqdn }}"
-}
-
-object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
-}
-{% endfor %}
-
-{% for item in icinga_fake_clients_ib %}
-object Zone "{{ item }}" {
-        endpoints = [ "{{ item }}" ]
-        parent = "{{ icinga_master_fqdn }}"
-}
-
-object Endpoint "{{ item }}" {
-}
-{% endfor %}
