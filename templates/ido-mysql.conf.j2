@@ -6,8 +6,8 @@
 library "db_ido_mysql"
 
 object IdoMysqlConnection "ido-mysql" {
-  user = "icinga",
+  user = "{{ icinga_mysql_user }}",
   password = "{{ icinga_mysql_password }}",
   host = "{{ icinga_mysql_host }}",
-  database = "icinga"
+  database = "{{ icinga_mysql_database }}"
 }

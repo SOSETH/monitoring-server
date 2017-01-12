@@ -50,6 +50,16 @@ object Service "{{ item2 }}" {
 {% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
 {% endif %}
+
+{% if (item2|match('apt')) %}
+    {% if 'apt_enabled' in hostvars[item] %}
+        vars.notify = true
+    {% else %}
+        vars.notify = false
+    {% endif %}
+{% else %}
+        vars.notify = true
+{% endif %}
         zone = "{{ hostvars[item]['ansible_fqdn'] }}"
 }
 {% endfor %}
@@ -65,6 +75,8 @@ object Host "{{ item2|regex_replace('^power (.*)$', '\\1') }}" {
     /* The UserGroup `icingaadmins` is defined in `users.conf`. */
     groups = [ "icingaadmins" ]
   }
+  
+  vars.notify = true
 }
 {% endif %}
 {% endfor %}
@@ -84,6 +96,8 @@ object Host "{{ item_name }}" {
     /* The UserGroup `icingaadmins` is defined in `users.conf`. */
     groups = [ "icingaadmins" ]
   }
+  
+  vars.notify = true
 }
 {% endif %}
 {% endif %}
