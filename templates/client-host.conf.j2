@@ -39,6 +39,43 @@ object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
 }
 /* * * * * * * * * * * * * Services * * * * * * * * * * * * * * * * * */
 {% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
+{% if (item2|match('ups.*')) %}
+object Service "ups status" {
+  import "satellite-service"
+  check_command = "dummy"
+  host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  vars.notify = true
+}
+object Service "ups battery" {
+  import "satellite-service"
+  check_command = "dummy"
+  host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  vars.notify = false
+}
+object Service "ups temp" {
+  import "satellite-service"
+  check_command = "dummy"
+  host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  vars.notify = true
+}
+object Service "ups load" {
+  import "satellite-service"
+  check_command = "dummy"
+  host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  vars.notify = false
+}
+object Service "ups time" {
+  import "satellite-service"
+  check_command = "dummy"
+  host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  vars.notify = false
+}
+{% else %}
 {% if (item2|match('http .*')) %}
 object Service "http {{ item }}" {
 {% elif (item2|match('https .*')) %}
@@ -73,6 +110,7 @@ object Service "{{ item2 }}" {
 {% endif %}
         zone = "{{ hostvars[item]['ansible_fqdn'] }}"
 }
+{% endif %}
 {% endfor %}
 
 {% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
