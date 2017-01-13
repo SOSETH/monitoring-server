@@ -30,18 +30,18 @@
       - api
 
   - name: Create database for icinga
-    mysql_db: login_host="{{ icinga_mysql_host }}" name=icinga state=present
+    mysql_db: login_host="{{ icinga_mysql_host }}" name={{ icinga_mysql_database }} state=present
     register: dbcreated
 
   - name: Create database for icingaweb
     mysql_db: login_host="{{ icinga_mysql_host }}" name=icingaweb state=present
 
   - name: Import icinga schema
-    shell: mysql -h {{ icinga_mysql_host }} icinga < /usr/share/icinga2-ido-mysql/schema/mysql.sql
+    shell: mysql -h {{ icinga_mysql_host }} {{ icinga_mysql_database }} < /usr/share/icinga2-ido-mysql/schema/mysql.sql
     when: dbcreated.changed
 
   - name: Create database user for icinga
-    mysql_user: login_host="{{ icinga_mysql_host }}" name=icinga password="{{ icinga_mysql_password }}" priv="icinga.*:ALL"
+    mysql_user: login_host="{{ icinga_mysql_host }}" name={{ icinga_mysql_database }} password="{{ icinga_mysql_password }}" priv="icinga.*:ALL"
 
   - name: Create database user for icingaweb
     mysql_user: login_host="{{ icinga_mysql_host }}" name=icingaweb password="{{ icinga_mysql_web_password }}" priv="icingaweb.*:ALL"

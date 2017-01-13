@@ -40,5 +40,5 @@ apply Notification "mail-icingaadmin" to Service {
   user_groups = host.vars.notification.mail.groups
   users = host.vars.notification.mail.users
 
-  assign where host.vars.notification.mail
+  assign where host.vars.notification.mail && service.vars.notify
 }
