@@ -3,7 +3,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 object Zone "{{ item }}" {
         endpoints = [ "{{ item }}" ]
-        parent = "{{ icinga_master_fqdn }}"
+        parent = "master"
 }
 
 object Endpoint "{{ item }}" {

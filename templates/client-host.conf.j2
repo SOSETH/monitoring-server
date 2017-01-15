@@ -1,17 +1,23 @@
+{% if item not in groups['mon-server'] %}
+{% set zonename=hostvars[item]['ansible_fqdn'] %}
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * Zone {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 object Zone "{{ hostvars[item]['ansible_fqdn'] }}" {
         endpoints = [ "{{ hostvars[item]['ansible_fqdn'] }}" ]
-        parent = "{{ icinga_master_fqdn }}"
+        parent = "master"
 }
 
 object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
 }
+{% else %}
+{% set zonename="master" %}
+{% endif %}
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * Host {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+{% if item != ansible_fqdn %}
 object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
   import "satellite-host"
   check_command = "cluster-zone"
@@ -37,6 +43,7 @@ object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
   vars.is_client = true
   {% endif %}
 }
+
 /* * * * * * * * * * * * * Services * * * * * * * * * * * * * * * * * */
 {% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
 {% if (item2|match('ups.*')) %}
@@ -44,35 +51,35 @@ object Service "ups status" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = true
 }
 object Service "ups battery" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = false
 }
 object Service "ups temp" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = true
 }
 object Service "ups load" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = false
 }
 object Service "ups time" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = false
 }
 {% else %}
@@ -108,7 +115,7 @@ object Service "{{ item2 }}" {
 {% else %}
         vars.notify = true
 {% endif %}
-        zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+        zone = "{{ zonename }}"
 }
 {% endif %}
 {% endfor %}
@@ -154,3 +161,5 @@ object Host "{{ item_name }}" {
 {% endif %}
 {% endif %}
 {% endfor %}
+
+{% endif %}

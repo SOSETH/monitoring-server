@@ -22,4 +22,6 @@ object InfluxdbWriter "influxdb" {
       service = "$service.name$"
     }
   }
+  enable_send_thresholds = true
+  enable_send_metadata = true
 }
