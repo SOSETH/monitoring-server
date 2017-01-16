@@ -77,7 +77,6 @@
     template: src={{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
     notify: restart icinga
     with_items:
-      - graphite.conf
       - influxdb.conf
       - ido-mysql.conf
       - api.conf

@@ -16,10 +16,10 @@ object InfluxdbWriter "influxdb" {
     }
   }
   service_template = {
-    measurement = "$service.check_command$"
+    measurement = "$service.vars.datgroup$"
     tags = {
       hostname = "$host.name$"
-      service = "$service.name$"
+      source = "$service.vars.datitem$"
     }
   }
   enable_send_thresholds = true
