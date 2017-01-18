@@ -1,3 +1,10 @@
+require('heapdump')
+/*var cluster = require('cluster')
+var workers = [];
+// This takes ages, but it turns out that this is actually due to InfluxDB so more workers don't help :(
+var NUM_WORKERS = 1
+var worker_idx = 0;*/
+
 const Influx = require('influx')
 const influx = new Influx.InfluxDB({
   host: 'localhost',
@@ -5,19 +12,6 @@ const influx = new Influx.InfluxDB({
 })
 
 var newfangledStuff = ['apt', 'cluster-zone', 'cpu_load_short', 'disk', 'dummy', 'hostalive', 'ib-host', 'icinga', 'iostat', 'load', 'mem', 'procs', 'users', 'infiniband', 'smart', 'ceph']
-
-// List hosts, filtering out newish measurements
-influx.getMeasurements().then(results => {
-  results.forEach(function(entry) {
-    if (newfangledStuff.indexOf(entry) < 0) {
-      if(entry == 'mon_sos_ethz_ch') {
-        processHost(entry)
-      }
-    }
-  })
-}, err => {
-  console.log(err)
-})
 
 var hostDevicesToMointpointMap = {
   "portal-lee2_ethz_ch" : {
@@ -118,6 +112,7 @@ function mapCheckToDict(host, checkname, metric) {
   console.log("PANIC: Unknown check '"+ checkname+ "', will not be converted!")
   return null
 }
+
 function processHost(name) {
   // Find all checks of host
   influx.query('SHOW TAG VALUES FROM "'+ name+'" WITH KEY = "check"').then(results => {
@@ -130,35 +125,16 @@ function processHost(name) {
           
           if (metadata) {
             // Mapping succesfull -> convert data
-            influx.query("SELECT value FROM "+ name+ " WHERE check='"+ entry['value']+ "' AND metric='"+ entryM['value']+ "'").then(results => {
-              // results is an array of dicts, where each dict has a key value (obvious) and a key time(that contains two timestamps and two functions)
-              console.log("Processing check '"+ entry['value']+ "' (metric '"+ entryM['value']+ "') for host "+ name)
-              process.stdout.write("Converting data... ")
-              var points = []
-              results.forEach(function testfun(sPoint) {
-                var tmp = {}
-                tmp[metadata['metric']] = sPoint['value']
-                points.push({
-                  measurement: metadata['measurement'],
-                  tags: {source: metadata['source'], hostname: metadata['hostname'] },
-                  fields: tmp,
-                  timestamp: sPoint['time']
-                })
-              })
-              console.log("done.")
-              process.stdout.write("Writing to DB...")
-              influx.writePoints(points, {
-                database: 'icinga',
-                precision: 's'
-              }).catch(err => {
-            		console.log("Error when converting check '"+ entry['value']+ "' (metric '"+ entryM['value']+ "') for host "+ name)
-                console.log("New metadata: ")
-                console.log(metadata)
-                console.log(err)
-                return
-            	})
-              console.log("done.")
-            })
+            var msg = {
+              'name': name,
+              'entry': entry,
+              'entryM': entryM,
+              'metadata': metadata
+            }
+            /*workers[worker_idx].send(msg)
+            worker_idx++;
+            worker_idx = worker_idx % NUM_WORKERS*/
+            doWork(msg)
           }
         })
       })
@@ -167,3 +143,62 @@ function processHost(name) {
 		console.log(err)
 	})
 }
+
+function doWork(msg) {
+  var name = msg['name']
+  var entry = msg['entry']
+  var entryM = msg['entryM']
+  var metadata = msg['metadata']
+  influx.query("SELECT value FROM "+ name+ " WHERE check='"+ entry['value']+ "' AND metric='"+ entryM['value']+ "'").then(results => {
+    // results is an array of dicts, where each dict has a key value (obvious) and a key time(that contains two timestamps and two functions)
+    console.log("Processing check '"+ entry['value']+ "' (metric '"+ entryM['value']+ "') for host "+ name)
+    process.stdout.write("Converting data... ")
+    var points = []
+    results.forEach(function testfun(sPoint) {
+      var tmp = {}
+      tmp[metadata['metric']] = sPoint['value']
+      points.push({
+        measurement: metadata['measurement'],
+        tags: {source: metadata['source'], hostname: metadata['hostname'] },
+        fields: tmp,
+        timestamp: sPoint['time']
+      })
+    })
+    console.log("done.")
+    process.stdout.write("Writing to DB...")
+    influx.writePoints(points, {
+      database: 'icinga',
+      precision: 's'
+    }).catch(err => {
+      console.log("Error when converting check '"+ entry['value']+ "' (metric '"+ entryM['value']+ "') for host "+ name)
+      console.log("New metadata: ")
+      console.log(metadata)
+      console.log(err)
+      return
+    })
+    console.log("done.")
+  })
+}
+
+
+//if (cluster.isMaster) {
+  // Let'se go!
+  /*for (var i = 0; i < NUM_WORKERS; i++) {
+    var worker = cluster.fork()
+    workers[i] = worker
+  }*/
+  // List hosts, filtering out newish measurements
+  influx.getMeasurements().then(results => {
+    results.forEach(function(entry) {
+      if (newfangledStuff.indexOf(entry) < 0) {
+        if(entry == 'mon_sos_ethz_ch') {
+          processHost(entry)
+        }
+      }
+    })
+  }, err => {
+    console.log(err)
+  })
+/*} else {
+  process.on('message', doWork);
+}*/
