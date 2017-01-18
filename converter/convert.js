@@ -4,14 +4,15 @@ const influx = new Influx.InfluxDB({
   database: 'icinga'
 })
 
-var newfangledStuff = ['apt', 'cluster-zone', 'cpu_load_short', 'disk', 'dummy', 'hostalive', 'ib-host', 'icinga', 'iostat', 'load', 'mem', 'procs', 'users', 'infiniband', 'smart']
+var newfangledStuff = ['apt', 'cluster-zone', 'cpu_load_short', 'disk', 'dummy', 'hostalive', 'ib-host', 'icinga', 'iostat', 'load', 'mem', 'procs', 'users', 'infiniband', 'smart', 'ceph']
+
+// List hosts, filtering out newish measurements
 influx.getMeasurements().then(results => {
   results.forEach(function(entry) {
     if (newfangledStuff.indexOf(entry) < 0) {
-      console.log("Processing entry: "+ entry)
-      //if(entry == 'mon_sos_ethz_ch') {
+      if(entry == 'mon_sos_ethz_ch') {
         processHost(entry)
-      //}
+      }
     }
   })
 }, err => {
@@ -69,7 +70,7 @@ function mapCheckToDict(host, checkname, metric) {
   */
   var retval = {'source': 'local', 'hostname': host.replace(/_/g, '.'), 'metric': metric}
   
-  // 'Switch' out the simple checks first. Default is the more involved stuff
+  // 'Switch' out the simple checks first.
   if (passThroughChecks.indexOf(checkname) >= 0) {
     retval['measurement'] = checkname
     return retval
@@ -81,10 +82,14 @@ function mapCheckToDict(host, checkname, metric) {
   } else if (checkname.indexOf("http") == 0) {
     retval['measurement'] = 'http'
     retval['source'] = checkname.replace('http_', '').replace(/_/g, '.')
+    if (retval['source'] == 'http') {
+      // Happenes for very old data
+      retval['source'] = ipmiSource
+    }
     retval['metric'] = metric // WITH UNDERSCORES!
     return retval
   } else if (checkname.indexOf("infiniband") == 0) {
-    // Disk check, syntax: infiniband_hostname
+    // syntax: infiniband_hostname
     retval['measurement'] = 'ib-host'
     retval['source'] = ibSource
     retval['metric'] = metric.replace(/_/g, ' ')
@@ -111,16 +116,51 @@ function mapCheckToDict(host, checkname, metric) {
   } else if (checkname == "ping4" || checkname == "ping6" || checkname == "ssh" || checkname == "swap")
     return null
   console.log("PANIC: Unknown check '"+ checkname+ "', will not be converted!")
+  return null
 }
 function processHost(name) {
+  // Find all checks of host
   influx.query('SHOW TAG VALUES FROM "'+ name+'" WITH KEY = "check"').then(results => {
 	  results.forEach(function(entry) {
+      // Find all metrics of (host, check)
       influx.query('SHOW TAG VALUES FROM "'+ name+'" WITH KEY = "metric" WHERE check=\''+ entry['value']+ '\'').then(results => {
     	  results.forEach(function(entryM) {
-          /*console.log("Check: " + entry['value'])
-          console.log("Metric: " + entryM['value'])*/
-          var result = mapCheckToDict(name, entry['value'], entryM['value'])
-          //console.log(result)
+          // Map to new schema
+          var metadata = mapCheckToDict(name, entry['value'], entryM['value'])
+          
+          if (metadata) {
+            // Mapping succesfull -> convert data
+            influx.query("SELECT value FROM "+ name+ " WHERE check='"+ entry['value']+ "' AND metric='"+ entryM['value']+ "'").then(results => {
+              // results is an array of dicts, where each dict has a key value (obvious) and a key time(that contains two timestamps and two functions)
+              console.log("Processing check '"+ entry['value']+ "' (metric '"+ entryM['value']+ "') for host "+ name)
+              process.stdout.write("Converting data... ")
+              var points = []
+              results.forEach(function testfun(sPoint) {
+                var tmp = {}
+                tmp[metadata['metric']] = sPoint['value']
+                points.push({
+                  measurement: metadata['measurement'],
+                  tags: {source: metadata['source'], hostname: metadata['hostname'] },
+                  fields: tmp,
+                  timestamp: sPoint['time']
+                })
+              })
+              console.log("done.")
+              process.stdout.write("Writing to DB...")
+              influx.writePoints(points, {
+                database: 'icinga',
+                retentionPolicy: '1y',
+                precision: 's'
+              }).catch(err => {
+            		console.log("Error when converting check '"+ entry['value']+ "' (metric '"+ entryM['value']+ "') for host "+ name)
+                console.log("New metadata: ")
+                console.log(metadata)
+                console.log(err)
+                return
+            	})
+              console.log("done.")
+            })
+          }
         })
       })
     })
