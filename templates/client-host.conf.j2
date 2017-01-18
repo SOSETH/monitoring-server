@@ -126,6 +126,10 @@ object Service "{{ item2 }}" {
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
         vars.datgroup = "raid"
         vars.datitem = "local"
+{% elif (item2|match('iostat .*')) %}
+        host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+        vars.datgroup = "iostat"
+        vars.datitem = "{{item2|regex_replace('^([a-zA-Z0-9\.\-]+) (.*)$', '/dev/\\2')}}"
 {% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
         vars.datgroup = "{{item2|regex_replace('^([a-zA-Z0-9\.\-]+) .*$', '\\1')}}"
