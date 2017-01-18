@@ -149,7 +149,6 @@ function processHost(name) {
               process.stdout.write("Writing to DB...")
               influx.writePoints(points, {
                 database: 'icinga',
-                retentionPolicy: '1y',
                 precision: 's'
               }).catch(err => {
             		console.log("Error when converting check '"+ entry['value']+ "' (metric '"+ entryM['value']+ "') for host "+ name)
