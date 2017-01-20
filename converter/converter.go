@@ -64,7 +64,7 @@ func mapCheckToDict(host string, checkname string, metric string) map[string]str
 
 	// "Switch" out the simple checks first.
 	for _, elm := range passThroughChecks {
-		if (strings.Contains(checkname, elm)) {
+		if (strings.Contains(elm, checkname)) {
 			retval["measurement"] = checkname
 			return retval
 		}
@@ -89,7 +89,7 @@ func mapCheckToDict(host string, checkname string, metric string) map[string]str
 		return retval
 	} else if (strings.Index(checkname, "infiniband") == 0) {
 		// syntax: infiniband_hostname
-		retval["measurement"] = "ib-host"
+		retval["measurement"] = "infiniband"
 		retval["source"] = ibSource
 		retval["metric"] = strings.Replace(metric, "_", " ", -1)
 		return retval
@@ -138,6 +138,10 @@ func moveData(queue chan MoveDataJob, cmds chan string) {
 		destination := job.destination
 		source := job.source
 		mapping := job.mapping
+		/*if (!strings.Contains(check, "ipmi")) {
+			continue
+		}
+		log.Println("Mapping: ", mapping)*/
 		//error parsing query: at least 1 non-time field must be queried
 		// Get oldest entry
 		query := client.Query{
@@ -236,7 +240,7 @@ func moveData(queue chan MoveDataJob, cmds chan string) {
 	}
 }
 
-func processHost(name string, source client.Client) {
+func processHost(name string, source client.Client, destination client.Client) {
 	query := client.Query{
 		Command: "SHOW TAG VALUES FROM \""+ name+"\" WITH KEY = \"check\"",
 		Database: "icinga",
@@ -273,7 +277,7 @@ func processHost(name string, source client.Client) {
 			mapped := mapCheckToDict(name, check, metric)
 			log.Println("metric "+ mapped["metric"] + " of "+ mapped["measurement"]+ " with tags hostname="+ mapped["hostname"]+ " and source="+ mapped["source"])
 			if mapped != nil {
-				queue <- MoveDataJob{source, source, mapped, name, check, metric}
+				queue <- MoveDataJob{source, destination, mapped, name, check, metric}
 			}
 		}
 	}
@@ -287,28 +291,34 @@ func main() {
 	if source, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr: "http://localhost:8086",
 	}) ; err == nil {
-		query := client.Query{
-			Command: "SHOW MEASUREMENTS",
-			Database: "icinga",
-		}
-		hosts, err := source.Query(query)
-		if err != nil {
-			log.Fatalln("Error: ", err)
-			return
-		}
-		for _, row := range hosts.Results[0].Series[0].Values {
-			host := row[0].(string)
-			found := false
-			for _, stuff := range newfangledStuff {
-				if (stuff == host) {
-					found = true
-					break
+		if dest, err := client.NewHTTPClient(client.HTTPConfig{
+			Addr: "http://localhost:8087",
+		}) ; err == nil {
+			query := client.Query{
+				Command: "SHOW MEASUREMENTS",
+				Database: "icinga",
+			}
+			hosts, err := source.Query(query)
+			if err != nil {
+				log.Fatalln("Error: ", err)
+				return
+			}
+			for _, row := range hosts.Results[0].Series[0].Values {
+				host := row[0].(string)
+				found := false
+				for _, stuff := range newfangledStuff {
+					if (stuff == host) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					log.Print("Processing host " + host)
+					processHost(host, source, dest)
 				}
 			}
-			if !found {
-				log.Print("Processing host " + host)
-				processHost(host, source)
-			}
+		} else {
+			log.Fatalln("Error: ", err)
 		}
 	} else {
 		log.Fatalln("Error: ", err)
