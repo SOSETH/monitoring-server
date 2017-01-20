@@ -72,7 +72,11 @@ func mapCheckToDict(host string, checkname string, metric string) map[string]str
 	if (strings.Index(checkname, "disk") == 0) {
 		// Disk check, syntax: check: disk, metric: _
 		retval["measurement"] = "disk"
-	    	retval["metric"] = strings.Replace(metric, "_", "/", -1)
+		// hostDevicesToMointpointMap[host][checkname.replace('disk_', '').replace(/_/g, '/')]
+	    	retval["metric"] = hostDevicesToMointpointMap[host][strings.Replace(strings.Replace(checkname, "disk_", "", 1), "_", "/", -1)]
+		if (retval["metric"] == "disk") {
+			return nil
+		}
 		return retval
 	} else if (strings.Index(checkname, "http") == 0) {
 		retval["measurement"] = "http"
@@ -128,14 +132,52 @@ func moveData(queue chan MoveDataJob, cmds chan string) {
 	for {
 		select {
 		case job := <-queue:
-			host := job.host
-			check := job.check
-			metric := job.metric
-			destination := job.destination
-			source := job.source
-			mapping := job.mapping
+		host := job.host
+		check := job.check
+		metric := job.metric
+		destination := job.destination
+		source := job.source
+		mapping := job.mapping
+		//error parsing query: at least 1 non-time field must be queried
+		// Get oldest entry
+		query := client.Query{
+			Command: "SELECT time, value FROM \"" + host + "\" WHERE check='" + check + "' AND metric='" + metric + "' ORDER BY time LIMIT 1",
+			Database: "icinga",
+		}
+		data, err := source.Query(query)
+		if (err != nil) {
+			log.Fatalln("Coudln't read time: ", err)
+		}
+		if (len(data.Results) == 0) {
+			log.Println("WARNING: Result is empty, not gonna do this one...", data)
+			continue
+		}
+		oldest, err := time.Parse(time.RFC3339, data.Results[0].Series[0].Values[0][0].(string))
+		if (err != nil) {
+			log.Fatalln("Coudln't parse time: ", err)
+		}
+		// Get newest entry
+		query = client.Query{
+			Command: "SELECT time, value FROM \"" + host + "\" WHERE check='" + check + "' AND metric='" + metric + "' ORDER BY time DESC LIMIT 1",
+			Database: "icinga",
+		}
+		data, err = source.Query(query)
+		if (err != nil) {
+			log.Fatalln("Coudln't read time: ", err)
+		}
+		newest, err := time.Parse(time.RFC3339, data.Results[0].Series[0].Values[0][0].(string))
+		if (err != nil) {
+			log.Fatalln("Coudln't parse time: ", err)
+		}
+		duration := newest.Sub(oldest)
+		duration = duration / 10
+
+		for oldest.Before(newest) {
+			start := oldest.Format(time.RFC3339)
+			oldest = oldest.Add(duration)
+			end := oldest.Format(time.RFC3339)
 			query := client.Query{
-				Command: "SELECT value FROM " + host + " WHERE check='" + check + "' AND metric='" + metric + "'",
+				Command: "SELECT value FROM \"" + host + "\" WHERE check='" + check + "' AND metric='" + metric + "' AND time >= '"+ start+ "' AND time <= '"+ end+"'",
 				Database: "icinga",
 			}
 			data, err := source.Query(query)
@@ -152,6 +194,9 @@ func moveData(queue chan MoveDataJob, cmds chan string) {
 				"metric": mapping["metric"],
 			}
 			// Since JSON is so very untyped, we need to find out the type of our value...
+			if (len(data.Results[0].Series) == 0) {
+				continue
+			}
 			_, numeric := data.Results[0].Series[0].Values[0][1].(json.Number)
 			for _, row := range data.Results[0].Series[0].Values {
 				// 0: date, 1: data
@@ -181,7 +226,8 @@ func moveData(queue chan MoveDataJob, cmds chan string) {
 			if (err != nil) {
 				log.Fatal("Couldn't write to destination: ", err)
 			}
-			log.Println("Processed "+ metric+" of check "+ check+" of host "+ host)
+		}
+		//log.Println("Processed "+ metric+" of check "+ check+" of host "+ host)
 
 		case _ = <-cmds:
 			break
@@ -260,10 +306,8 @@ func main() {
 				}
 			}
 			if !found {
-				if (host == "mon_sos_ethz_ch") {
-					log.Print("Processing host " + host)
-					processHost(host, source)
-				}
+				log.Print("Processing host " + host)
+				processHost(host, source)
 			}
 		}
 	} else {
