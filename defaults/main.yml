@@ -3,7 +3,7 @@ icinga_base_url: "https://mon.sos.ethz.ch"
 icinga_mysql_host: localhost
 icinga_mysql_password: "mmNE6bIZF5qjaHDC8jeP9pNRI0j6He6j"
 icinga_mysql_database: icinga2
-icinga_mysql_user: icinga
+icinga_mysql_user: icinga2
 icinga_mysql_web_password: "mmNE6bIZF5qjaHDC8jeP9pNRI0j6He6j"
 icinga_graphite_host: localhost
 icinga_graphite_port: 2004

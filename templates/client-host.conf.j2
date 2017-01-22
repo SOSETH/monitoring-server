@@ -1,17 +1,23 @@
+{% if item not in groups['mon-server'] %}
+{% set zonename=hostvars[item]['ansible_fqdn'] %}
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * Zone {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 object Zone "{{ hostvars[item]['ansible_fqdn'] }}" {
         endpoints = [ "{{ hostvars[item]['ansible_fqdn'] }}" ]
-        parent = "{{ icinga_master_fqdn }}"
+        parent = "master"
 }
 
 object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
 }
+{% else %}
+{% set zonename="master" %}
+{% endif %}
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * Host {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+{% if item != ansible_fqdn %}
 object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
   import "satellite-host"
   check_command = "cluster-zone"
@@ -37,6 +43,7 @@ object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
   vars.is_client = true
   {% endif %}
 }
+
 /* * * * * * * * * * * * * Services * * * * * * * * * * * * * * * * * */
 {% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
 {% if (item2|match('ups.*')) %}
@@ -44,36 +51,46 @@ object Service "ups status" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = true
+  vars.datgroup = "ups"
+  vars.datitem = "local"
 }
 object Service "ups battery" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = false
+  vars.datgroup = "ups"
+  vars.datitem = "local"
 }
 object Service "ups temp" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = true
+  vars.datgroup = "ups"
+  vars.datitem = "local"
 }
 object Service "ups load" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = false
+  vars.datgroup = "ups
+  vars.datitem = "local"
 }
 object Service "ups time" {
   import "satellite-service"
   check_command = "dummy"
   host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
-  zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+  zone = "{{ zonename }}"
   vars.notify = false
+  vars.datgroup = "ups"
+  vars.datitem = "local"
 }
 {% else %}
 {% if (item2|match('http .*')) %}
@@ -87,16 +104,37 @@ object Service "{{ item2 }}" {
         check_command = "dummy"
 {% if (item2|match('ipmi .*')) %}
         host_name = "{{ item2|regex_replace('^ipmi (.*)$', '\\1') }}"
+        vars.datgroup = "ipmi"
+        vars.datitem = "{{hostvars[item]['ansible_fqdn']}}"
 {% elif (item2|match('http .*')) %}
         host_name = "{{ item2|regex_replace('^http (.*)$', '\\1') }}"
+        vars.datgroup = "http"
+        vars.datitem = "{{hostvars[item]['ansible_fqdn']}}"
 {% elif (item2|match('https .*')) %}
         host_name = "{{ item2|regex_replace('^https (.*)$', '\\1') }}"
+        vars.datgroup = "http"
+        vars.datitem = "{{hostvars[item]['ansible_fqdn']}}"
 {% elif (item2|match('power .*')) %}
         host_name = "{{ item2|regex_replace('^power (.*)$', '\\1') }}"
+        vars.datgroup = "power"
+        vars.datitem = "{{hostvars[item]['ansible_fqdn']}}"
 {% elif (item2|match('infiniband .*')) %}
         host_name = "{{ item2|regex_replace('^infiniband (.*)$', '\\1') }}"
+        vars.datgroup = "infiniband"
+        vars.datitem = "{{hostvars[item]['ansible_fqdn']}}"
+{% elif item2 == 'raid' %}
+        host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+        vars.datgroup = "raid"
+        vars.datitem = "local"
+{% elif (item2|match('iostat .*')) %}
+        host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+        vars.datgroup = "iostat"
+        vars.datitem = "{{item2|regex_replace('^([a-zA-Z0-9\.\-]+) (.*)$', '/dev/\\2')}}"
 {% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+        vars.datgroup = "{{item2|regex_replace('^([a-zA-Z0-9\.\-]+) .*$', '\\1')}}"
+        /* vars.datitem = "{{item2|regex_replace('^([a-zA-Z0-9\.\-]+) (.*)$', '\\2')}}" */
+        vars.datitem = "local"
 {% endif %}
 
 {% if (item2|match('apt')) %}
@@ -108,7 +146,7 @@ object Service "{{ item2 }}" {
 {% else %}
         vars.notify = true
 {% endif %}
-        zone = "{{ hostvars[item]['ansible_fqdn'] }}"
+        zone = "{{ zonename }}"
 }
 {% endif %}
 {% endfor %}
@@ -154,3 +192,5 @@ object Host "{{ item_name }}" {
 {% endif %}
 {% endif %}
 {% endfor %}
+
+{% endif %}

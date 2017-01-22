@@ -25,34 +25,44 @@
     with_items:
       - command
       - perfdata
-      - graphite
+      - influxdb
       - ido-mysql
       - api
+    tags:
+      - icconf
+      - icfeatures
 
   - name: Create database for icinga
     mysql_db: login_host="{{ icinga_mysql_host }}" name={{ icinga_mysql_database }} state=present
     register: dbcreated
+    tags: icdb
 
   - name: Create database for icingaweb
     mysql_db: login_host="{{ icinga_mysql_host }}" name=icingaweb state=present
+    tags: icdb
 
   - name: Import icinga schema
     shell: mysql -h {{ icinga_mysql_host }} {{ icinga_mysql_database }} < /usr/share/icinga2-ido-mysql/schema/mysql.sql
     when: dbcreated.changed
+    tags: icdb
 
   - name: Create database user for icinga
-    mysql_user: login_host="{{ icinga_mysql_host }}" name={{ icinga_mysql_database }} password="{{ icinga_mysql_password }}" priv="icinga.*:ALL"
+    mysql_user: login_host="{{ icinga_mysql_host }}" name={{ icinga_mysql_user }} password="{{ icinga_mysql_password }}" priv="icinga.*:ALL"
+    tags: icdb
 
   - name: Create database user for icingaweb
     mysql_user: login_host="{{ icinga_mysql_host }}" name=icingaweb password="{{ icinga_mysql_web_password }}" priv="icingaweb.*:ALL"
+    tags: icdb
 
     # Per default, at least /etc/icingaweb2/modules has wrong ownership
   - name: Fix icingaweb directory ownership
     file: path=/etc/icingaweb2 owner=www-data group=icingaweb2 recurse=yes
+    tags: icconf
 
   - name: Create icinga nginx config file
     template: src=nginx-dropin.conf.j2 dest=/etc/nginx/base.d/icinga.conf owner=root group=root mode=0644
     notify: restart nginx
+    tags: icconf
 
   - name: Create icinga config files
     template: src={{item }}.j2 dest=/etc/icinga2/conf.d/{{item }} owner=root group=root mode=0644
@@ -61,30 +71,43 @@
       - templates.conf
       - notifications.conf
       - users.conf
+    tags: icconf
 
   - name: Configure icinga features
     template: src={{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
     notify: restart icinga
     with_items:
-      - graphite.conf
+      - influxdb.conf
       - ido-mysql.conf
       - api.conf
+    tags:
+      - icconf
+      - icfeatures
 
   - name: Configure client hosts
     template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
     notify: restart icinga
     with_items: "{{ groups['mon-client'] }}"
+    tags: icconf
+    
+  - name: Configure other server hosts
+    template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
+    notify: restart icinga
+    with_items: "{{ groups['mon-server'] }}"
+    tags: icconf
 
   - name: Configure fake hosts for IB switches
     template: src=client-host-ib.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
     notify: restart icinga
     with_items: "{{ icinga_fake_clients_ib }}"
     when: icinga_fake_clients_ib is defined
+    tags: icconf
 
   - name: Configure no fake hosts for IB switches
     set_fact:
       icinga_fake_clients_ib: []
     when: icinga_fake_clients_ib is not defined
+    tags: icconf
 
   - name: Create icinga main configs
     template: src={{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
@@ -93,6 +116,7 @@
       - icinga2.conf
       - constants.conf
       - zones.conf
+    tags: icconf
 
   - name: Set php fpm default timezone
     lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'

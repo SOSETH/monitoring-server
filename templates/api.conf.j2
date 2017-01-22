@@ -8,4 +8,13 @@ object ApiListener "api" {
   ca_path = SysconfDir + "/icinga2/pki/ca-mag.crt"
 
   ticket_salt = TicketSalt
+  accept_config = true
 }
+
+{% for host in groups['mon-server'] %}
+{% if host != ansible_fqdn %}
+object ApiUser "{{ host }}" {
+  client_cn = "{{ host }}"
+}
+{% endif %}
+{% endfor %}
