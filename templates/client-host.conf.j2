@@ -18,6 +18,8 @@ object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
  * * * * * * * * * Host {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 {% if item != ansible_fqdn %}
+{% if hostvars[item]['ansible_fqdn'] not in icinga_hosts_found|append('', 'icinga_hosts_found'+ansible_fqdn) %}
+{% set icinga_hosts_found=icinga_hosts_found|append(hostvars[item]['ansible_fqdn'], 'icinga_hosts_found'+ansible_fqdn) %}
 object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
   import "satellite-host"
   check_command = "cluster-zone"
@@ -43,6 +45,9 @@ object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
   vars.is_client = true
   {% endif %}
 }
+{% else %}
+/* Eww, someone else already created the host :( */
+{% endif %}
 
 /* * * * * * * * * * * * * Services * * * * * * * * * * * * * * * * * */
 {% for item2 in hostvars[item]['ansible_local']['icinga_checks'] %}
@@ -176,6 +181,8 @@ object Host "{{ item2|regex_replace('^power (.*)$', '\\1') }}" {
 /* * * * * * * * * * * * * VHost * * * * * * * * * * * * * * * * * */
 {% if item_name not in groups['mon-client'] %}
 {% if item_name not in groups['mon-server'] %}
+{% if item_name not in icinga_hosts_found|append('', 'icinga_hosts_found'+ansible_fqdn) %}
+{% set icinga_hosts_found=icinga_hosts_found|append(item_name, 'icinga_hosts_found'+ansible_fqdn) %}
 object Host "{{ item_name }}" {
   check_command = "dummy"
   /* Define notification mail attributes for notification apply rules in `notifications.conf`. */
@@ -186,6 +193,7 @@ object Host "{{ item_name }}" {
   
   vars.notify = true
 }
+{% endif %}
 {% endif %}
 {% endif %}
 {% set websites_found = websites_found|join(item_name) %}

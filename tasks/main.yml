@@ -4,7 +4,7 @@
 
   - name: Prevent apache2 from being installed
     copy: src=noapache.conf dest=/etc/apt/preferences.d/noapache
-
+    
   - name: Install additional icinga packages
     apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
     with_items:
@@ -17,6 +17,8 @@
   - name: Concat CA and CRL
     assemble: src=/etc/icinga2/pki/ca dest=/etc/icinga2/pki/ca-mag.crt owner=root group=root mode=0644
     changed_when: False
+    tags:
+      - icconf
 
   # Per default the socket is owned by nagios:www-run
   - name: Enable icinga modules
