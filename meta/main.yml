@@ -2,4 +2,4 @@
   dependencies:
     - { role: nginx }
     - { role: mariadb }
-    - { role: icinga-checks }
+    - { role: monitoring-base }

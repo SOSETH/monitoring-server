@@ -1,3 +1,4 @@
+/* Only 'master' zones in this file! */
 {% for host in groups['mon-server'] %}
 object Endpoint "{{ host }}" {
   {% if host != ansible_fqdn %}

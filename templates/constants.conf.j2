@@ -22,7 +22,7 @@ const PluginContribDir = "/usr/lib/nagios/plugins"
 //const NodeName = "localhost"
 
 /* Our local zone name. */
-const ZoneName = "{{ icinga_master_fqdn }}"
+const ZoneName = "{{ ansible_fqdn }}"
 
 /* Secret key for remote node tickets */
 // We don't use autosigning so leave this empty...

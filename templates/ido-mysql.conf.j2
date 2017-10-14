@@ -6,10 +6,10 @@
 library "db_ido_mysql"
 
 object IdoMysqlConnection "ido-mysql" {
-  user = "{{ icinga_mysql_user }}",
-  password = "{{ icinga_mysql_password }}",
-  host = "{{ icinga_mysql_host }}",
-  database = "{{ icinga_mysql_database }}"
+  user = "{{ mon_icinga_mysql_user }}",
+  password = "{{ mon_icinga_mysql_password }}",
+  host = "{{ mon_icinga_mysql_host }}",
+  database = "{{ mon_icinga_mysql_database }}"
   
   /* 
    * Disable HA so that every node writes to it's own local DB -> saves me

@@ -1,11 +1,14 @@
 ---
   - name: Ensure apache2 is not installed
+    become: True
     apt: name=apache2 state=absent
 
   - name: Prevent apache2 from being installed
+    become: True
     copy: src=noapache.conf dest=/etc/apt/preferences.d/noapache
     
   - name: Install additional icinga packages
+    become: True
     apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
     with_items:
       - icinga2-ido-mysql
@@ -15,6 +18,7 @@
       - php5-intl
 
   - name: Concat CA and CRL
+    become: True
     assemble: src=/etc/icinga2/pki/ca dest=/etc/icinga2/pki/ca-mag.crt owner=root group=root mode=0644
     changed_when: False
     tags:
@@ -22,6 +26,7 @@
 
   # Per default the socket is owned by nagios:www-run
   - name: Enable icinga modules
+    become: True
     command: icinga2 feature enable {{ item }} creates=/etc/icinga2/features-enabled/{{ item }}.conf
     notify: restart icinga
     with_items:
@@ -35,38 +40,46 @@
       - icfeatures
 
   - name: Create database for icinga
-    mysql_db: login_host="{{ icinga_mysql_host }}" name={{ icinga_mysql_database }} state=present
+    become: True
+    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_database }} state=present
     register: dbcreated
     tags: icdb
 
   - name: Create database for icingaweb
-    mysql_db: login_host="{{ icinga_mysql_host }}" name=icingaweb state=present
+    become: True
+    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name=icingaweb state=present
     tags: icdb
 
   - name: Import icinga schema
-    shell: mysql -h {{ icinga_mysql_host }} {{ icinga_mysql_database }} < /usr/share/icinga2-ido-mysql/schema/mysql.sql
+    become: True
+    shell: mysql -h {{ mon_icinga_mysql_host }} {{ mon_icinga_mysql_database }} < /usr/share/icinga2-ido-mysql/schema/mysql.sql
     when: dbcreated.changed
     tags: icdb
 
   - name: Create database user for icinga
-    mysql_user: login_host="{{ icinga_mysql_host }}" name={{ icinga_mysql_user }} password="{{ icinga_mysql_password }}" priv="icinga.*:ALL"
+    become: True
+    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_user }} password="{{ mon_icinga_mysql_password }}" priv="icinga.*:ALL"
     tags: icdb
 
   - name: Create database user for icingaweb
-    mysql_user: login_host="{{ icinga_mysql_host }}" name=icingaweb password="{{ icinga_mysql_web_password }}" priv="icingaweb.*:ALL"
+    become: True
+    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name=icingaweb password="{{ mon_icinga_mysql_web_password }}" priv="icingaweb.*:ALL"
     tags: icdb
 
     # Per default, at least /etc/icingaweb2/modules has wrong ownership
   - name: Fix icingaweb directory ownership
+    become: True
     file: path=/etc/icingaweb2 owner=www-data group=icingaweb2 recurse=yes
     tags: icconf
 
   - name: Create icinga nginx config file
+    become: True
     template: src=nginx-dropin.conf.j2 dest=/etc/nginx/base.d/icinga.conf owner=root group=root mode=0644
     notify: restart nginx
     tags: icconf
 
   - name: Create icinga config files
+    become: True
     template: src={{item }}.j2 dest=/etc/icinga2/conf.d/{{item }} owner=root group=root mode=0644
     notify: restart icinga
     with_items:
@@ -76,6 +89,7 @@
     tags: icconf
 
   - name: Configure icinga features
+    become: True
     template: src={{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
     notify: restart icinga
     with_items:
@@ -87,31 +101,21 @@
       - icfeatures
 
   - name: Configure client hosts
+    become: True
     template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
     notify: restart icinga
     with_items: "{{ groups['mon-client'] }}"
     tags: icconf
     
   - name: Configure other server hosts
+    become: True
     template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
     notify: restart icinga
     with_items: "{{ groups['mon-server'] }}"
     tags: icconf
 
-  - name: Configure fake hosts for IB switches
-    template: src=client-host-ib.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
-    notify: restart icinga
-    with_items: "{{ icinga_fake_clients_ib }}"
-    when: icinga_fake_clients_ib is defined
-    tags: icconf
-
-  - name: Configure no fake hosts for IB switches
-    set_fact:
-      icinga_fake_clients_ib: []
-    when: icinga_fake_clients_ib is not defined
-    tags: icconf
-
   - name: Create icinga main configs
+    become: True
     template: src={{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
     notify: restart icinga
     with_items:
