@@ -19,10 +19,6 @@ object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
  * * * * * * * * * Host {{ hostvars[item]['ansible_fqdn'] }} * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 {% if item != ansible_fqdn %}
-{# Check if we have already found this host. This can happen for example if a
-   host executes checks for another host. #}
-{% if hostvars[item]['ansible_fqdn'] not in icinga_hosts_found|append('', 'icinga_hosts_found'+ansible_fqdn) %}
-{% set icinga_hosts_found=icinga_hosts_found|append(hostvars[item]['ansible_fqdn'], 'icinga_hosts_found'+ansible_fqdn) %}
 object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
   import "satellite-host"
   check_command = "cluster-zone"
@@ -52,10 +48,9 @@ object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
   vars.is_client = {{ hostvars[item]['mon_is_client'] }}
   {% endif %}
 }
-{% else %}
-/* Eww, someone else already created the host :( */
 {% endif %}
 
+{% if item != ansible_fqdn %}
 /* * * * * * * * * * * * * Services * * * * * * * * * * * * * * * * * */
 {% for item2 in hostvars[item]['ansible_local']['mon_icinga_checks'] %}
 {# The giant loop. All services need to be mentioned in the master config #}
@@ -109,6 +104,8 @@ object Service "ups time" {
 }
 {% else %}
 {# Not UPS #}
+
+{# Note that http(s) gets named after the host that executes the check! #}
 {% if (item2|match('http .*')) %}
 object Service "http {{ item }}" {
 {% elif (item2|match('https .*')) %}
@@ -157,7 +154,7 @@ object Service "{{ item2 }}" {
     {# Generally, you do not want every single host to notify you on available
        updates #}
     {% if 'mon_apt_enabled' in hostvars[item] %}
-        vars.notify = true
+        vars.notify = hostvars[item]['mon_apt_enabled']
     {% else %}
         vars.notify = false
     {% endif %}
@@ -168,12 +165,14 @@ object Service "{{ item2 }}" {
 }
 {% endif %}
 {% endfor %}
+{% endif %}
 
-{% set websites_found = [] %}
+/* Known hosts until this point: {{ icinga_hosts_found }} */
+
 {% for item2 in hostvars[item]['ansible_local']['mon_icinga_checks'] %}
 {# Second for loop. This one is to create hosts for hosts that we have referenced
    but that do not exist (e.g. a website) #}
-{% if (item2|match('power .*')) %}
+{% if (item2|match('power .*')) and (item2|regex_replace('^power (.*)$', '\\1') not in icinga_hosts_found|append('', 'icinga_hosts_found'+ansible_fqdn)) %}
 /* * * * * * * * * * * * * VHost * * * * * * * * * * * * * * * * * */
 object Host "{{ item2|regex_replace('^power (.*)$', '\\1') }}" {
   check_command = "dummy"
@@ -187,14 +186,13 @@ object Host "{{ item2|regex_replace('^power (.*)$', '\\1') }}" {
 }
 {% endif %} {# Power #}
 
-{% if (item2|match('infiniband .*')) %}
+{% if (item2|match('infiniband .*')) and (item2|regex_replace('^infiniband (.*)$', '\\1') not in icinga_hosts_found|append('', 'icinga_hosts_found'+ansible_fqdn)) %}
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * * * * * * * * * Host {{ item }} * * * * * * * *
+ * * * * * * * * * Host {{ item2|regex_replace('^infiniband (.*)$', '\\1') }} * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 object Host "{{ item2|regex_replace('^infiniband (.*)$', '\\1') }}" {
-  import "satellite-host"
-  /* IB does not really have an IP per se ;)
   check_command = "dummy"
+  /* IB does not really have an IP per se ;)
 
   /* Set custom attribute `os` for hostgroup assignment in `groups.conf`.
    * vars.os = "Linux" */
@@ -209,10 +207,7 @@ object Host "{{ item2|regex_replace('^infiniband (.*)$', '\\1') }}" {
 
 {% if (item2|match('http .*')) %}
 {% set item_name=item2|regex_replace('^http (.*)$', '\\1') %}
-{% if item_name not in websites_found %}
 /* * * * * * * * * * * * * VHost * * * * * * * * * * * * * * * * * */
-{% if item_name not in groups['mon-client'] %}
-{% if item_name not in groups['mon-server'] %}
 {% if item_name not in icinga_hosts_found|append('', 'icinga_hosts_found'+ansible_fqdn) %}
 {% set icinga_hosts_found=icinga_hosts_found|append(item_name, 'icinga_hosts_found'+ansible_fqdn) %}
 object Host "{{ item_name }}" {
@@ -226,11 +221,6 @@ object Host "{{ item_name }}" {
   vars.notify = true
 }
 {% endif %}
-{% endif %}
-{% endif %}
-{% set websites_found = websites_found|join(item_name) %}
-{% endif %}
 {% endif %} {# HTTP #}
 
 {% endfor %}
-{% endif %}

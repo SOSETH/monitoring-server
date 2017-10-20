@@ -27,6 +27,12 @@
       - icconf
       - pmconf
 
+  - name: Ensure that php5-fpm is disabled
+    become: True
+    shell: systemctl stop php5-fpm && systemctl disable php5-fpm
+    failed_when: False
+    changed_when: False
+
   - name: Check tcpdup version
     become: True
     shell: apt-cache policy tcpdup | grep Install | head -n1 | awk '{print $2}'
@@ -179,6 +185,10 @@
       - icconf
       - icfeatures
 
+  - name: Load configuration facts
+    set_fact:
+      icinga_hosts_found: "{{icinga_hosts_found|append(groups['mon-server'], 'icinga_hosts_found'+ansible_fqdn)|append(groups['mon-client'], 'icinga_hosts_found'+ansible_fqdn)}}"
+
   - name: Configure client hosts
     become: True
     template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
@@ -228,7 +238,7 @@
       - icfeatures
 
   - name: Set php fpm default timezone
-    lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
+    lineinfile: dest=/etc/php/7.0/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
     notify: restart php-fpm
 
   - name: Ensure that the fpm/web user can access the icinga socket
