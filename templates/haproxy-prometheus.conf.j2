@@ -1,0 +1,42 @@
+{% for item in groups['mon-server'] %}
+frontend {{item}}-front-9100
+	bind 127.43.1.{{1 + loop.index0}}:9100
+	mode tcp
+	default_backend {{item}}-back-9100
+
+backend {{item}}-back-9100
+	mode tcp
+	server remote {{item}}:9101 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required
+{% endfor %}
+
+{% for item in groups['mon-client'] %}
+frontend {{item}}-front-9100
+	bind 127.43.2.{{1 + loop.index0}}:9100
+	mode tcp
+	default_backend {{item}}-back-9100
+
+backend {{item}}-back-9100
+	mode tcp
+	server remote {{item}}:9101 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required
+{% endfor %}
+
+frontend graphite
+	bind :::9110 ssl crt /etc/haproxy/pm-sv-full.pem ca-file /etc/haproxy/pm-ca.crt crl-file /etc/haproxy/pm-crl.pem verify required
+	mode tcp
+	default_backend graphite-back
+
+backend graphite-back
+	mode tcp
+	server local 127.0.0.1:9109
+
+{% for item in groups['mon-server'] %}
+frontend {{item}}-front-9110
+	bind 127.43.1.{{1 + loop.index0}}:9111
+	mode tcp
+	default_backend {{item}}-back-9110
+
+backend {{item}}-back-9110
+	mode tcp
+	server remote {{item}}:9110 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required
+{% endfor %}
+

@@ -1,9 +1,33 @@
 ---
   - name: restart icinga
+    become: True
     service: name=icinga2 enabled=yes state=restarted
 
   - name: restart nginx
+    become: True
     service: name=nginx enabled=yes state=restarted
 
+  - name: restart haproxy
+    become: True
+    service: name=haproxy enabled=yes state=restarted
+
+  - name: restart prometheus
+    become: True
+    service: name=prometheus enabled=yes state=restarted
+
   - name: restart php-fpm
+    become: True
     service: name=php5-fpm enabled=yes state=restarted
+
+  - name: reload systemd
+    become: True
+    command: systemctl daemon-reload
+    notify: restart grexp
+
+  - name: restart grexp
+    become: True
+    service: name=graphite-exporter enabled=yes state=restarted
+
+  - name: restart tcpdup
+    become: True
+    service: name=tcpdup enabled=yes state=restarted

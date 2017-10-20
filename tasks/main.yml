@@ -6,38 +6,117 @@
   - name: Prevent apache2 from being installed
     become: True
     copy: src=noapache.conf dest=/etc/apt/preferences.d/noapache
-    
-  - name: Install additional icinga packages
+
+  - name: Install packages
     become: True
     apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
     with_items:
       - icinga2-ido-mysql
       - icingaweb2
-      - php5-fpm
-      - php5-imagick
-      - php5-intl
+      - php-fpm
+      - php-imagick
+      - php-intl
+      - prometheus
+      - libboost-system1.62.0
+      - libboost-thread1.62.0
+      - libboost-regex1.62.0
+      - libboost-chrono1.62.0
+      - libboost-date-time1.62.0
+      - libboost-atomic1.62.0
+    tags:
+      - icconf
+      - pmconf
 
-  - name: Concat CA and CRL
+  - name: Check tcpdup version
+    become: True
+    shell: apt-cache policy tcpdup | grep Install | head -n1 | awk '{print $2}'
+    register: swversion
+    failed_when: False
+    changed_when: False
+    tags:
+      - pmconf
+
+  - name: Copy tcpdup package
+    become: True
+    copy: src=tcpdup_0.1_amd64.deb dest=/tmp/tcpdup_0.1_amd64.deb owner=root group=root mode=0644
+    when: swversion.stdout != "0.1"
+    tags:
+      - pmconf
+
+  - name: Install tcpdup
+    become: True
+    command: dpkg -i --force-overwrite /tmp/tcpdup_0.1_amd64.deb
+    when: swversion.stdout != "0.1"
+    notify: restart tcpdup
+    tags:
+      - pmconf
+
+  - name: Configure tcpdup
+    become: True
+    template: src=tcpdup.j2 dest=/etc/default/tcpdup mode=0644
+    notify: restart tcpdup
+    tags:
+      - pmconf
+
+  - name: Concat CA and CRL (icinga)
     become: True
     assemble: src=/etc/icinga2/pki/ca dest=/etc/icinga2/pki/ca-mag.crt owner=root group=root mode=0644
     changed_when: False
     tags:
       - icconf
 
-  # Per default the socket is owned by nagios:www-run
-  - name: Enable icinga modules
+  - name: Build haproxy SSL certificate (prometheus)
     become: True
-    command: icinga2 feature enable {{ item }} creates=/etc/icinga2/features-enabled/{{ item }}.conf
-    notify: restart icinga
-    with_items:
-      - command
-      - perfdata
-      - influxdb
-      - ido-mysql
-      - api
+    shell: cat /etc/haproxy/pm-cl.crt /etc/haproxy/pm-cl.key > /etc/haproxy/pm-cl-full.pem
+    changed_when: False
+    notify: restart haproxy
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin
+    become: True
+    template: src=haproxy-prometheus.conf.j2 dest=/etc/haproxy/conf.d/70-prometheus.conf mode=0644
+    notify: restart haproxy
+    tags:
+      - pmconf
+
+  - name: Configure prometheus
+    become: True
+    template: src=prometheus.yml.j2 dest=/etc/prometheus/prometheus.yml mode=0644
+    notify: restart prometheus
+    tags:
+      - pmconf
+
+  - name: Create prometheus graphite exporter dir
+    become: True
+    file: path=/opt/grexp state=directory owner=root group=root mode=0755
     tags:
       - icconf
-      - icfeatures
+      - pmconf
+
+  - name: Install prometheus graphite exporter
+    become: True
+    copy: src=graphite_exporter dest=/opt/grexp/graphite_exporter owner=root group=root mode=0755
+    notify: restart grexp
+    tags:
+      - icconf
+      - pmconf
+
+  - name: Install prometheus graphite exporter service
+    become: True
+    template: src=graphite-exporter.service.j2 dest=/etc/systemd/system/graphite-exporter.service owner=root group=root mode=0644
+    notify: reload systemd
+    tags:
+      - icconf
+      - pmconf
+
+  - name: Install prometheus graphite exporter service
+    become: True
+    template: src=mapping.j2 dest=/opt/grexp/mapping owner=root group=root mode=0644
+    notify: restart grexp
+    tags:
+      - icconf
+      - pmconf
 
   - name: Create database for icinga
     become: True
@@ -93,7 +172,7 @@
     template: src={{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
     notify: restart icinga
     with_items:
-      - influxdb.conf
+      - graphite.conf
       - ido-mysql.conf
       - api.conf
     tags:
@@ -106,7 +185,7 @@
     notify: restart icinga
     with_items: "{{ groups['mon-client'] }}"
     tags: icconf
-    
+
   - name: Configure other server hosts
     become: True
     template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
@@ -123,6 +202,30 @@
       - constants.conf
       - zones.conf
     tags: icconf
+
+  - name: Enable icinga modules
+    become: True
+    command: icinga2 feature enable {{ item }} creates=/etc/icinga2/features-enabled/{{ item }}.conf
+    notify: restart icinga
+    with_items:
+      - command
+      - perfdata
+      - graphite
+      - ido-mysql
+      - api
+    tags:
+      - icconf
+      - icfeatures
+
+  - name: Disable icinga modules
+    become: True
+    command: icinga2 feature disable {{ item }} removes=/etc/icinga2/features-enabled/{{ item }}.conf
+    notify: restart icinga
+    with_items:
+      - influxdb
+    tags:
+      - icconf
+      - icfeatures
 
   - name: Set php fpm default timezone
     lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'

@@ -6,8 +6,9 @@
 library "perfdata"
 
 object GraphiteWriter "graphite" {
-  host = "{{ icinga_graphite_host }}"
-  port = {{ icinga_graphite_port }}
+  host = "127.0.0.1"
+  port = 9112
   host_name_template = "icinga2.$host.name$.host.$host.check_command$"
-  service_name_template = "icinga2.$host.name$.service.$service.name$"
+  #service_name_template = "icinga2.$host.name$.service.$service.name$"
+  service_name_template = "icinga2.$host.name$.check.$service.vars.datgroup$.metric.$service.vars.datitem$"
 }
