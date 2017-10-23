@@ -11,6 +11,11 @@ object ApiListener "api" {
   accept_config = true
 }
 
+object ApiUser "director" {
+  password = "director"
+  permissions = [ "*" ]
+}
+
 {% for host in groups['mon-server'] %}
 {% if host != ansible_fqdn %}
 object ApiUser "{{ host }}" {

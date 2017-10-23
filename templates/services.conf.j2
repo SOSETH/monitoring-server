@@ -1,0 +1,383 @@
+/*
+ * Service apply rules.
+ *
+ * The CheckCommand objects `ping4`, `ping6`, etc
+ * are provided by the plugin check command templates.
+ * Check the documentation for details.
+ *
+ * Tip: Use `icinga2 object list --type Service` to
+ * list all service objects after running
+ * configuration validation (`icinga2 daemon -C`).
+ */
+
+/*
+ * This is an example host based on your
+ * local host's FQDN. Specify the NodeName
+ * constant in `constants.conf` or use your
+ * own description, e.g. "db-host-1".
+ */
+
+template Service "normal-service" {
+  import "generic-service"
+  vars.datitem = "local"
+  vars.notify = true
+}
+
+apply Service "disk " for (disk => config in host.vars.disk) {
+  import "normal-service"
+  check_command = "disk"
+
+  vars += config
+  vars.datgroup = "disk"
+}
+
+apply Service "iostat " for (iostat => config in host.vars.iostat) {
+  import "normal-service"
+  check_command = "iostat"
+
+  vars += config
+  vars.datgroup = "iostat"
+}
+
+apply Service "smart " for (smart => config in host.vars.sata) {
+  import "normal-service"
+  check_command = "smartSOS"
+
+  vars += config
+  vars.datgroup = "smart"
+  vars.datitem = vars.device
+}
+
+apply Service "sas " for (sas => config in host.vars.sas) {
+  import "normal-service"
+  check_command = "sasSOS"
+
+  vars += config
+  vars.datgroup = "smart"
+  vars.datitem = vars.device
+}
+
+{#
+{% for item in mon_icinga_checks|matching('sensors .*') %}
+{% set item_name=item|regex_replace('^sensors (.*)$', '\\1') %}
+apply Service "{{ item }}" {
+  import "grr-local"
+
+  check_command = "sensor"
+  vars.my_sensor = "{{ (mon_check_sensors|selectattr('name', 'equalto', item_name)|map(attribute='sensor')|list)[0] }}"
+
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "sensors"
+  vars.datitem = "local"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('raid') %}
+apply Service "{{ item }}" {
+  import "grr-local"
+
+  check_command = "raid"
+
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "raid"
+  vars.datitem = "local"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('ceph') %}
+apply Service "{{ item }}" {
+  import "grr-local"
+
+  check_command = "ceph"
+  check_interval = 30s
+
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "ceph"
+  vars.datitem = "{{ansible_fqdn}}"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('ipmi .*')|list %}
+{% set item_name=item|regex_replace('^ipmi (.*)$', '\\1') %}
+apply Service "{{ item }}" {
+  import "grr-local"
+
+  check_command = "ipmi"
+
+  vars.ipmi_ip = "{{ (mon_check_ipmi_hosts|selectattr('name', 'equalto', item_name)|map(attribute='ip')|list)[0] }}"
+  assign where host.name == "{{ item_name }}"
+  vars.notify = true
+  vars.datgroup = "ipmi"
+  vars.datitem = "{{ansible_fqdn}}"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('https .*')|list %}
+{% set item_name=item|regex_replace('^https (.*)$', '\\1') %}
+/* The check_http check is from the Nagios era, aka when people didn't yet
+ * have nice things. It still carries the spirit of it's time and has the
+ * slightly retarded property of swallowing it's performance data when you
+ * check the certificate for expiry. Therefore we have to use it twice...
+ */
+apply Service "https {{ ansible_fqdn }}" {
+  import "grr-local"
+
+  check_command = "http"
+  check_interval = 1h
+
+  vars.http_pagesize = "{{ (mon_check_websites|selectattr('name', 'equalto', item_name)|map(attribute='minsize')|list)[0] }}"
+  vars.http_vhost = "{{ item_name }}"
+  vars.http_extendedperfdata = "true"
+  vars.http_onredirect = "follow"
+  vars.http_certificate = "{{ (mon_check_websites|selectattr('name', 'equalto', item_name)|map(attribute='ssldays')|list)[0] }}"
+  vars.http_ssl = "true"
+  vars.http_sni = "true"
+  vars.http_certificate = "10"
+
+  assign where host.name == "{{ item_name }}"
+  vars.notify = true
+  vars.datgroup = "http"
+  vars.datitem = "{{ansible_fqdn}}"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('http .*')|list %}
+{% set item_name=item|regex_replace('^http (.*)$', '\\1') %}
+apply Service "http {{ ansible_fqdn }}" {
+  import "grr-local"
+
+  check_command = "http"
+  check_interval = {{ (mon_check_websites|selectattr('name', 'equalto', item_name)|map(attribute='t')|list)[0] }}
+
+  vars.http_pagesize = "{{ (mon_check_websites|selectattr('name', 'equalto', item_name)|map(attribute='minsize')|list)[0] }}"
+  vars.http_vhost = "{{ item_name }}"
+  vars.http_extendedperfdata = "true"
+  vars.http_onredirect = "follow"
+{% if (mon_check_websites|selectattr('name', 'equalto', item_name)|map(attribute='ssl')|list)[0] == "true" %}
+  vars.http_ssl = "true"
+  vars.http_sni = "true"
+{% endif %}
+{% if (mon_check_websites|selectattr('name', 'equalto', item_name)|map(attribute='auth')|list)[0] == "true" %}
+  vars.http_auth_pair = "{{ (mon_check_websites|selectattr('name', 'equalto', item_name)|map(attribute='user')|list)[0] }}:{{ (mon_check_websites|selectattr('name', 'equalto', item_name)|map(attribute='password')|list)[0] }}"
+{% endif %}
+  assign where host.name == "{{ item_name }}"
+  vars.notify = true
+  vars.datgroup = "http"
+  vars.datitem = "{{ansible_fqdn}}"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('power .*')|list %}
+{% set item_name=item|regex_replace('^power (.*)$', '\\1') %}
+apply Service "{{ item }}" {
+  import "grr-local"
+
+  check_command = "power"
+
+  vars.ip = "{{ (mon_check_power_strips|selectattr('name', 'equalto', item_name)|map(attribute='ip')|list)[0] }}"
+  vars.statefile = "/tmp/pwr_{{ item_name }}"
+  assign where host.name == "{{ item_name }}"
+  vars.notify = true
+  vars.datgroup = "power"
+  vars.datitem = "{{ansible_fqdn}}"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('infiniband .*')|list %}
+{% set item_name=item|regex_replace('^infiniband (.*)$', '\\1') %}
+apply Service "{{ item }}" {
+  import "grr-local"
+
+  check_command = "ib-host"
+  check_interval = 20s
+
+  vars.host = "{{ (mon_check_infiniband|selectattr('name', 'equalto', item_name)|map(attribute='name')|list)[0] }}"
+  vars.netfile = "/etc/icinga2/ib-netfile.yml"
+
+  assign where host.name == "{{ item_name }}"
+  vars.notify = true
+  vars.datgroup = "ib-host"
+  vars.datitem = "{{ansible_fqdn}}"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('infiniband-net.*')|list %}
+apply Service "{{ item }}" {
+  import "grr-local"
+
+  check_command = "ib-net"
+  vars.netfile = "/etc/icinga2/ib-netfile.yml"
+
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "ib-net"
+  vars.datitem = "{{ansible_fqdn}}"
+}
+{% endfor %}
+
+apply Service "icinga" {
+  import "grr-local"
+
+  check_command = "icinga"
+
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "icinga"
+  vars.datitem = "local"
+}
+
+apply Service "procs" {
+  import "grr-local"
+
+  check_command = "procs"
+
+  vars.procs_warning = "{{ mon_icinga_procs_warn }}"
+  vars.procs_critical = "{{ mon_icinga_procs_crit }}"
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "procs"
+  vars.datitem = "local"
+}
+
+apply Service "users" {
+  import "grr-local"
+
+  check_command = "users"
+
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "users"
+  vars.datitem = "local"
+}
+
+apply Service "mem" {
+  import "grr-local"
+
+  check_command = "mem"
+  vars.mem_used = true
+  vars.mem_cache = true
+  vars.mem_warning = 80
+  vars.mem_critical = 95
+
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "mem"
+  vars.datitem = "local"
+}
+
+apply Service "load" {
+  import "grr-local"
+  check_command = "load"
+
+  vars.load_wload1 = "{{ mon_icinga_load_wload1 }}"
+  vars.load_wload5 = "{{ mon_icinga_load_wload5 }}"
+  vars.load_wload15 = "{{ mon_icinga_load_wload15 }}"
+  vars.load_cload1 = "{{ mon_icinga_load_cload1 }}"
+  vars.load_cload5 = "{{ mon_icinga_load_cload5 }}"
+  vars.load_cload15 = "{{ mon_icinga_load_cload15 }}"
+
+  assign where host.name == NodeName
+  vars.notify = true
+  vars.datgroup = "load"
+  vars.datitem = "local"
+}
+
+{% for item in mon_icinga_checks|matching('apt') %}
+apply Service "{{ item }}" {
+  import "grr-local"
+
+  check_command = "apt"
+
+  assign where host.name == NodeName
+  {% if mon_apt_enabled %}
+    vars.notify = true
+  {% else %}
+    vars.notify = false
+  {% endif %}
+  vars.datgroup = "apt"
+  vars.datitem = "local"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('swport .*')|list %}
+{% set item_name=item|regex_replace('^swport (.*)$', '\\1') %}
+apply Service "{{ item|replace("$", "") }}" {
+  import "grr-local"
+
+  check_command = "snmpif"
+
+  vars.ip = "{{ (mon_check_swport|selectattr('if', 'equalto', item_name)|map(attribute='ip')|list)[0] }}"
+  vars.interface = "{{ item_name|replace("$", "$$") }}"
+  assign where host.name == NodeName
+  vars.datgroup = "snmpif"
+  vars.datitem = "local"
+}
+{% endfor %}
+
+{% for item in mon_icinga_checks|matching('ups.*') %}
+apply Service "ups status" {
+  import "grr-local"
+
+  check_command = "apcupsd"
+  vars.warning = "0"
+  vars.crit = "1"
+  vars.check = "status"
+  vars.datgroup = "ups"
+  vars.datitem = "local"
+
+  assign where host.name == NodeName
+}
+apply Service "ups battery" {
+  import "grr-local"
+
+  check_command = "apcupsd"
+  vars.warning = "80"
+  vars.crit = "50"
+  vars.check = "bcharge"
+  vars.datgroup = "ups"
+  vars.datitem = "local"
+
+  assign where host.name == NodeName
+}
+apply Service "ups temp" {
+  import "grr-local"
+
+  check_command = "apcupsd"
+  vars.warning = "50"
+  vars.crit = "60"
+  vars.check = "itemp"
+  vars.datgroup = "ups"
+  vars.datitem = "local"
+
+  assign where host.name == NodeName
+}
+apply Service "ups load" {
+  import "grr-local"
+
+  check_command = "apcupsd"
+  vars.warning = "70"
+  vars.crit = "90"
+  vars.check = "loadpct"
+  vars.datgroup = "ups"
+  vars.datitem = "local"
+
+  assign where host.name == NodeName
+}
+apply Service "ups time" {
+  import "grr-local"
+
+  check_command = "apcupsd"
+  vars.warning = "10"
+  vars.crit = "5"
+  vars.check = "timeleft"
+  vars.datgroup = "ups"
+  vars.datitem = "local"
+
+  assign where host.name == NodeName
+}
+{% endfor %}*/
+
+#}

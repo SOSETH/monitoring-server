@@ -3,10 +3,29 @@ mon_icinga_base_url: "https://mon.sos.ethz.ch"
 mon_icinga_mysql_host: localhost
 mon_icinga_mysql_password: "mmNE6bIZF5qjaHDC8jeP9pNRI0j6He6j"
 mon_icinga_mysql_database: icinga2
+mon_icinga_mysql_web_database: icingaweb
+mon_icinga_mysql_director_database: icingadirector
 mon_icinga_mysql_user: icinga2
+mon_icinga_mysql_web_user: icingaweb
+mon_icinga_mysql_director_user: icingadirector
 mon_icinga_mysql_web_password: "mmNE6bIZF5qjaHDC8jeP9pNRI0j6He6j"
+mon_icinga_mysql_director_password: "mmNE6bIZF5qjaHDC8jeP9pNRI0j6He6j"
 mon_icinga_graphite_host: localhost
 mon_icinga_graphite_port: 2004
 mon_icinga_grafana_base: "{{ icinga_base_url }}/grafana"
 mon_icinga_master_fqdn: mon.sos.ethz.ch
 mon_icinga_default_checks: ["apt", "disk /", "disk", "icinga", "iostat", "load", "mem", "procs", "users"]
+
+mon_prometheus_job_relabling:
+  - source_labels: [job]
+    regex: '(.*)_sos_ethz_ch$'
+    replacement: '$1.sos.ethz.ch'
+    target_label: job
+  - source_labels: [job]
+    regex: '(.*)_ethz_ch$'
+    replacement: '$1.ethz.ch'
+    target_label: job
+  - source_labels: [job]
+    regex: '(.*)_ch$'
+    replacement: '$1.ch'
+    target_label: job

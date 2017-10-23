@@ -10,6 +10,7 @@ object Zone "{{ hostvars[item]['ansible_fqdn'] }}" {
 }
 
 object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
+        host = "{{ hostvars[item]['ansible_fqdn'] }}"
 }
 {% else %}
 {% set zonename="master" %}
@@ -50,13 +51,12 @@ object Host "{{ hostvars[item]['ansible_fqdn'] }}" {
 }
 {% endif %}
 
+{#
 {% if item != ansible_fqdn %}
 /* * * * * * * * * * * * * Services * * * * * * * * * * * * * * * * * */
 {% for item2 in hostvars[item]['ansible_local']['mon_icinga_checks'] %}
-{# The giant loop. All services need to be mentioned in the master config #}
 
 {% if (item2|match('ups.*')) %}
-{# UPS basically has no configuration options right now #}
 object Service "ups status" {
   import "satellite-service"
   check_command = "dummy"
@@ -103,9 +103,7 @@ object Service "ups time" {
   vars.datitem = "local"
 }
 {% else %}
-{# Not UPS #}
 
-{# Note that http(s) gets named after the host that executes the check! #}
 {% if (item2|match('http .*')) %}
 object Service "http {{ item }}" {
 {% elif (item2|match('https .*')) %}
@@ -144,6 +142,16 @@ object Service "{{ item2 }}" {
         vars.datgroup = "iostat"
         vars.datitem = "{{item2|regex_replace('^([a-zA-Z0-9\.\-]+) (.*)$', '/dev/\\2')}}"
 	vars.notify = false
+{% elif (item2|match('sas .*')) %}
+        host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+        vars.datgroup = "sas"
+        vars.datitem = "{{item2|regex_replace('^sas (.*)$', '\\1')}}"
+	vars.notify = false
+{% elif (item2|match('smart .*')) %}
+        host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
+        vars.datgroup = "smart"
+        vars.datitem = "{{item2|regex_replace('^smart (.*)$', '\\1')}}"
+	vars.notify = false
 {% else %}
         host_name = "{{ hostvars[item]['ansible_fqdn'] }}"
         vars.datgroup = "{{item2|regex_replace('^([a-zA-Z0-9\.\-]+) .*$', '\\1')}}"
@@ -151,8 +159,6 @@ object Service "{{ item2 }}" {
 {% endif %}
 
 {% if (item2|match('apt')) %}
-    {# Generally, you do not want every single host to notify you on available
-       updates #}
     {% if 'mon_apt_enabled' in hostvars[item] %}
         vars.notify = hostvars[item]['mon_apt_enabled']
     {% else %}
@@ -170,8 +176,6 @@ object Service "{{ item2 }}" {
 /* Known hosts until this point: {{ icinga_hosts_found }} */
 
 {% for item2 in hostvars[item]['ansible_local']['mon_icinga_checks'] %}
-{# Second for loop. This one is to create hosts for hosts that we have referenced
-   but that do not exist (e.g. a website) #}
 {% if (item2|match('power .*')) and (item2|regex_replace('^power (.*)$', '\\1') not in icinga_hosts_found|append('', 'icinga_hosts_found'+ansible_fqdn)) %}
 /* * * * * * * * * * * * * VHost * * * * * * * * * * * * * * * * * */
 object Host "{{ item2|regex_replace('^power (.*)$', '\\1') }}" {
@@ -184,7 +188,7 @@ object Host "{{ item2|regex_replace('^power (.*)$', '\\1') }}" {
   
   vars.notify = true
 }
-{% endif %} {# Power #}
+{% endif %}
 
 {% if (item2|match('infiniband .*')) and (item2|regex_replace('^infiniband (.*)$', '\\1') not in icinga_hosts_found|append('', 'icinga_hosts_found'+ansible_fqdn)) %}
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -221,6 +225,7 @@ object Host "{{ item_name }}" {
   vars.notify = true
 }
 {% endif %}
-{% endif %} {# HTTP #}
+{% endif %} 
 
 {% endfor %}
+#}

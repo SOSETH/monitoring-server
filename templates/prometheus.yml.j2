@@ -31,26 +31,23 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: node
-    # If prometheus-node-exporter is installed, grab stats about the local
-    # machine by default.
-    static_configs:
-      - targets: ['localhost:9100']
-
-  # Import Icinga2 metrics. Job name is already set!
+  # Import Icinga2 metrics. Job name is already set, but contains _ instead of . :/
+  # If you know a better regex - feel free to fix!
+  # TODO: Make configurable
   - job_name: icinga
     honor_labels: true
     static_configs:
       - targets: ['localhost:9108']
+    metric_relabel_configs:
+{{ mon_prometheus_job_relabling|to_nice_yaml|indent(6, true) }}
 
+  # Node exporters on other mons
 {% for item in groups['mon-server'] %}
   - job_name: '{{item}}'
     static_configs:
       - targets: ['127.43.1.{{1 + loop.index0}}:9100']
-  - job_name: 'icinga-{{item}}'
-    static_configs:
-      - targets: ['127.43.1.{{1 + loop.index0}}:9111']
 {% endfor %}
+  # Node exporters on clients
 {% for item in groups['mon-client'] %}
   - job_name: '{{item}}'
     static_configs:

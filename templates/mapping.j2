@@ -5,6 +5,13 @@ target="$3"
 metric="$4"
 name="icinga_${2}"
 
+icinga2.*.check.*.metric.*.perfdata.*.*.value
+job="$1"
+check="$2"
+target="$3"
+metric="$4.$5"
+name="icinga_${2}"
+
 icinga2.*.host.*.perfdata.*.value
 job="$1"
 check="$2"

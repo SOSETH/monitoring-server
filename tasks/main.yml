@@ -23,6 +23,7 @@
       - libboost-chrono1.62.0
       - libboost-date-time1.62.0
       - libboost-atomic1.62.0
+      - unzip
     tags:
       - icconf
       - pmconf
@@ -32,6 +33,25 @@
     shell: systemctl stop php5-fpm && systemctl disable php5-fpm
     failed_when: False
     changed_when: False
+
+  - name: Check if icingaweb-director is installed
+    become: True
+    stat: path=/usr/share/icingaweb2/modules/director
+    register: icdstat
+
+  - name: Download icingaweb-director (1.4)
+    get_url: url="https://github.com/Icinga/icingaweb2-module-director/archive/v1.4.0.zip" dest="/tmp/icd.zip"
+    when: not icdstat.stat.exists
+
+  - name: Extract icingaweb-director
+    become: True
+    unarchive: src="/tmp/icd.zip" dest="/usr/share/icingaweb2/modules" remote_src=yes
+    when: not icdstat.stat.exists
+
+  - name: Rename icingaweb-director extracted dir...
+    become: True
+    shell: mv /usr/share/icingaweb2/modules/icingaweb2-module-director-1.4.0 /usr/share/icingaweb2/modules/director
+    when: not icdstat.stat.exists
 
   - name: Check tcpdup version
     become: True
@@ -132,7 +152,13 @@
 
   - name: Create database for icingaweb
     become: True
-    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name=icingaweb state=present
+    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_web_database }} state=present
+    tags: icdb
+
+  - name: Create database for icingadirector
+    become: True
+    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_director_database }} state=present encoding="utf8"
+    register: ddbcreated
     tags: icdb
 
   - name: Import icinga schema
@@ -141,14 +167,25 @@
     when: dbcreated.changed
     tags: icdb
 
+  - name: Import icingaweb director schema
+    become: True
+    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_director_database }} state=import encoding="utf8" target="/usr/share/icingaweb2/modules/director/schema/mysql.sql"
+    when: ddbcreated.changed
+    tags: icdb
+
   - name: Create database user for icinga
     become: True
-    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_user }} password="{{ mon_icinga_mysql_password }}" priv="icinga.*:ALL"
+    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_user }} password="{{ mon_icinga_mysql_password }}" priv="{{ mon_icinga_mysql_database }}.*:ALL"
     tags: icdb
 
   - name: Create database user for icingaweb
     become: True
-    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name=icingaweb password="{{ mon_icinga_mysql_web_password }}" priv="icingaweb.*:ALL"
+    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name="{{ mon_icinga_mysql_web_user }}" password="{{ mon_icinga_mysql_web_password }}" priv="{{ mon_icinga_mysql_web_database }}.*:ALL"
+    tags: icdb
+
+  - name: Create database user for icingaweb-director
+    become: True
+    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name="{{ mon_icinga_mysql_director_user }}" password="{{ mon_icinga_mysql_director_password }}" priv="{{ mon_icinga_mysql_director_database }}.*:ALL"
     tags: icdb
 
     # Per default, at least /etc/icingaweb2/modules has wrong ownership
@@ -171,6 +208,7 @@
       - templates.conf
       - notifications.conf
       - users.conf
+      - services.conf
     tags: icconf
 
   - name: Configure icinga features
