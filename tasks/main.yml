@@ -227,19 +227,38 @@
     set_fact:
       icinga_hosts_found: "{{icinga_hosts_found|append(groups['mon-server'], 'icinga_hosts_found'+ansible_fqdn)|append(groups['mon-client'], 'icinga_hosts_found'+ansible_fqdn)}}"
 
-  - name: Configure client hosts
-    become: True
-    template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
-    notify: restart icinga
-    with_items: "{{ groups['mon-client'] }}"
-    tags: icconf
+ #- name: Configure client hosts
+ #    become: True
+ #    template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
+ #    notify: restart icinga
+ #    with_items: "{{ groups['mon-client'] }}"
+ #    tags: icconf
 
-  - name: Configure other server hosts
-    become: True
-    template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
-    notify: restart icinga
+ #  - name: Configure other server hosts
+ #    become: True
+ #    template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
+ #    notify: restart icinga
+ #    with_items: "{{ groups['mon-server'] }}"
+ #    tags: icconf
+  - name: Create client host directories
+    become: true
+    file: path=/etc/icinga2/zones.d/{{item}} state=directory owner=root group=nagios mode=0755
+    with_items: "{{ groups['mon-client'] }}"
+
+  - name: Create server host directory
+    become: true
+    file: path=/etc/icinga2/zones.d/master state=directory owner=root group=nagios mode=0755
+
+  - name: Upload client host details
+    become: true
+    copy: src=fetch/icc/{{item}}.conf dest=/etc/icinga2/zones.d/{{item}}/{{item}}.conf owner=root group=nagios mode=0644
+    with_items: "{{ groups['mon-client'] }}"
+    failed_when: False # Do not fail when we can't upload a host. That simply means that we're not gonna update it
+
+  - name: Upload server host details
+    become: true
+    copy: src=fetch/icc/{{item}}.conf dest=/etc/icinga2/zones.d/{{item}}.conf owner=root group=nagios mode=0644
     with_items: "{{ groups['mon-server'] }}"
-    tags: icconf
 
   - name: Create icinga main configs
     become: True

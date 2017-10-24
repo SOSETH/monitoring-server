@@ -6,13 +6,19 @@ object Zone "director-global" {
   global = true
 }
 
-
-/* Only 'master' zones in this file! */
 {% for host in groups['mon-server'] %}
 object Endpoint "{{ host }}" {
-  {% if host != ansible_fqdn %}
   host = "{{ host }}"
-  {% endif %}
+}
+{% endfor %}
+
+{% for host in groups['mon-client'] %}
+object Endpoint "{{ host }}" {
+  host = "{{ host }}"
+}
+object Zone "{{ host }}" {
+    endpoints = [ "{{ host }}" ]
+    parent = "master"
 }
 {% endfor %}
 
