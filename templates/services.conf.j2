@@ -21,6 +21,8 @@ template Service "normal-service" {
   import "generic-service"
   vars.datitem = "local"
   vars.notify = true
+  check_interval = 60s
+  check_period = "24x7"
 }
 
 apply Service "disk " for (disk => config in host.vars.disk) {
@@ -57,48 +59,39 @@ apply Service "sas " for (sas => config in host.vars.sas) {
   vars.datitem = vars.device
 }
 
-{#
-{% for item in mon_icinga_checks|matching('sensors .*') %}
-{% set item_name=item|regex_replace('^sensors (.*)$', '\\1') %}
-apply Service "{{ item }}" {
-  import "grr-local"
-
+apply Service "sensor " for (sensor => config in host.vars.sensor) {
+  import "normal-service"
   check_command = "sensor"
-  vars.my_sensor = "{{ (mon_check_sensors|selectattr('name', 'equalto', item_name)|map(attribute='sensor')|list)[0] }}"
 
-  assign where host.name == NodeName
-  vars.notify = true
-  vars.datgroup = "sensors"
-  vars.datitem = "local"
+  vars += config
+  vars.datgroup = "sensor"
 }
-{% endfor %}
 
-{% for item in mon_icinga_checks|matching('raid') %}
-apply Service "{{ item }}" {
-  import "grr-local"
-
+apply Service "raid" {
+  import "normal-service"
   check_command = "raid"
-
-  assign where host.name == NodeName
-  vars.notify = true
+  assign where host.vars.raid
   vars.datgroup = "raid"
-  vars.datitem = "local"
 }
-{% endfor %}
 
-{% for item in mon_icinga_checks|matching('ceph') %}
-apply Service "{{ item }}" {
-  import "grr-local"
-
+apply Service "ceph" {
+  import "normal-service"
   check_command = "ceph"
   check_interval = 30s
-
-  assign where host.name == NodeName
-  vars.notify = true
+  assign where host.vars.ceph
   vars.datgroup = "ceph"
-  vars.datitem = "{{ansible_fqdn}}"
+  vars.datitem = host.name
 }
-{% endfor %}
+
+apply Service "ipmi " for (ipmi => config in host.vars.ipmi) {
+  import "normal-service"
+  check_command = "ipmi"
+
+  vars += config
+  vars.datgroup = "ipmi"
+  vars.datitem = host.name
+}
+{#
 
 {% for item in mon_icinga_checks|matching('ipmi .*')|list %}
 {% set item_name=item|regex_replace('^ipmi (.*)$', '\\1') %}

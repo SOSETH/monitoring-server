@@ -245,9 +245,12 @@
     file: path=/etc/icinga2/zones.d/{{item}} state=directory owner=root group=nagios mode=0755
     with_items: "{{ groups['mon-client'] }}"
 
-  - name: Create server host directory
+  - name: Create server/system host directories
     become: true
-    file: path=/etc/icinga2/zones.d/master state=directory owner=root group=nagios mode=0755
+    file: path=/etc/icinga2/zones.d/{{item}} state=directory owner=root group=nagios mode=0755
+    with_items:
+      - master
+      - global-templates
 
   - name: Upload client host details
     become: true
@@ -259,6 +262,25 @@
     become: true
     copy: src=fetch/icc/{{item}}.conf dest=/etc/icinga2/zones.d/{{item}}.conf owner=root group=nagios mode=0644
     with_items: "{{ groups['mon-server'] }}"
+
+  - name: Create icinga global templates
+    become: True
+    template: src={{item }}.j2 dest=/etc/icinga2/zones.d/global-templates/{{item }} owner=root group=root mode=0644
+    notify: restart icinga
+    with_items:
+      - services.conf
+    tags: icconf
+      #      - templates.conf
+      #      - notifications.conf
+      #      - users.conf
+
+  - name: Remove old icinga config files from previous versions of this role
+    become: True
+    file: path=/etc/icinga2/conf.d/{{ item }} state=absent
+    notify: restart icinga
+    with_items:
+      - services.conf
+    tags: icconf
 
   - name: Create icinga main configs
     become: True
