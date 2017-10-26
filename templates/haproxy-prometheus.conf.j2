@@ -10,14 +10,29 @@ backend {{item}}-back-9100
 {% endfor %}
 
 {% for item in groups['mon-client'] %}
+{% set ipidx=(1 + loop.index0) %}
+{% for item2 in hostvars[item]['ansible_local']['mon_prometheus_exporters'] %}
+# {{ item }} / {{ item2 }}
+{% if item2 == "node" %}
 frontend {{item}}-front-9100
-	bind 127.43.2.{{1 + loop.index0}}:9100
+	bind 127.43.2.{{ ipidx }}:9100
 	mode tcp
 	default_backend {{item}}-back-9100
 
 backend {{item}}-back-9100
 	mode tcp
 	server remote {{item}}:9101 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required
+{% elif item2 == "ceph" %}
+frontend {{item}}-front-9128
+	bind 127.43.2.{{ ipidx }}:9128
+	mode tcp
+	default_backend {{item}}-back-9128
+
+backend {{item}}-back-9128
+	mode tcp
+	server remote {{item}}:9228 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required
+{% endif %}
+{% endfor %}
 {% endfor %}
 
 frontend graphite

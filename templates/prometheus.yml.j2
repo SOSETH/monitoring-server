@@ -45,11 +45,25 @@ scrape_configs:
 {% for item in groups['mon-server'] %}
   - job_name: '{{item}}'
     static_configs:
-      - targets: ['127.43.1.{{1 + loop.index0}}:9100']
+{% set ipidx=(1 + loop.index0) %}
+{% for item2 in hostvars[item]['ansible_local']['mon_prometheus_exporters'] %}
+{% if item2 == "node" %}
+      - targets: ['127.43.1.{{ ipidx }}:9100']
+{% elif item2 == "ceph" %}
+      - targets: ['127.43.1.{{ ipidx }}:9128']
+{% endif %}
+{% endfor %}
 {% endfor %}
   # Node exporters on clients
 {% for item in groups['mon-client'] %}
   - job_name: '{{item}}'
     static_configs:
-      - targets: ['127.43.2.{{1 + loop.index0}}:9100']
+{% set ipidx=(1 + loop.index0) %}
+{% for item2 in hostvars[item]['ansible_local']['mon_prometheus_exporters'] %}
+{% if item2 == "node" %}
+      - targets: ['127.43.2.{{ ipidx }}:9100']
+{% elif item2 == "ceph" %}
+      - targets: ['127.43.2.{{ ipidx }}:9128']
+{% endif %}
+{% endfor %}
 {% endfor %}
