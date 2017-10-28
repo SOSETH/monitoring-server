@@ -23,6 +23,7 @@ template Service "normal-service" {
   vars.notify = true
   check_interval = 60s
   check_period = "24x7"
+  command_endpoint = host.name
 }
 
 apply Service "disk " for (disk => config in host.vars.disk) {

@@ -51,6 +51,12 @@ template Notification "mail-host-notification" {
             FlappingStart, FlappingEnd,
             DowntimeStart, DowntimeEnd, DowntimeRemoved ]
 
+  vars += {
+    notification_icingaweb2url = "https://{{ ansible_fqdn }}/icingaweb2/dashboard#!/icingaweb2"
+    notification_from = "Icinga 2 <root@sos.ethz.ch>"
+    notification_logtosyslog = true
+  }
+
   period = "24x7"
 }
 
@@ -66,6 +72,12 @@ template Notification "mail-service-notification" {
   types = [ Problem, Acknowledgement, Recovery, Custom,
             FlappingStart, FlappingEnd,
             DowntimeStart, DowntimeEnd, DowntimeRemoved ]
+
+  vars += {
+    notification_icingaweb2url = "https://{{ ansible_fqdn }}/icingaweb2/dashboard#!/icingaweb2"
+    notification_from = "Icinga 2 <root@sos.ethz.ch>"
+    notification_logtosyslog = true
+  }
 
   period = "24x7"
 }

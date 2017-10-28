@@ -202,7 +202,7 @@
 
   - name: Create icinga config files
     become: True
-    template: src={{item }}.j2 dest=/etc/icinga2/conf.d/{{item }} owner=root group=root mode=0644
+    template: src=icinga2/{{item }}.j2 dest=/etc/icinga2/conf.d/{{item }} owner=root group=root mode=0644
     notify: restart icinga
     with_items:
       - templates.conf
@@ -211,9 +211,18 @@
       - services.conf
     tags: icconf
 
+  - name: Create icinga scripts
+    become: True
+    template: src=icinga2/{{item }}.j2 dest=/etc/icinga2/scripts/{{item }} owner=root group=root mode=0755
+    notify: restart icinga
+    with_items:
+      - mail-host-notification.sh
+      - mail-service-notification.sh
+    tags: icconf
+
   - name: Configure icinga features
     become: True
-    template: src={{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
+    template: src=icinga2/{{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
     notify: restart icinga
     with_items:
       - graphite.conf
@@ -226,20 +235,7 @@
   - name: Load configuration facts
     set_fact:
       icinga_hosts_found: "{{icinga_hosts_found|append(groups['mon-server'], 'icinga_hosts_found'+ansible_fqdn)|append(groups['mon-client'], 'icinga_hosts_found'+ansible_fqdn)}}"
-
- #- name: Configure client hosts
- #    become: True
- #    template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
- #    notify: restart icinga
- #    with_items: "{{ groups['mon-client'] }}"
- #    tags: icconf
-
- #  - name: Configure other server hosts
- #    become: True
- #    template: src=client-host.conf.j2 dest=/etc/icinga2/conf.d/cl-{{item}}.conf owner=root group=nagios mode=0640
- #    notify: restart icinga
- #    with_items: "{{ groups['mon-server'] }}"
- #    tags: icconf
+    
   - name: Create client host directories
     become: true
     file: path=/etc/icinga2/zones.d/{{item}} state=directory owner=root group=nagios mode=0755
@@ -260,12 +256,12 @@
 
   - name: Upload server host details
     become: true
-    copy: src=fetch/icc/{{item}}.conf dest=/etc/icinga2/zones.d/{{item}}.conf owner=root group=nagios mode=0644
+    copy: src=fetch/icc/{{item}}.conf dest=/etc/icinga2/zones.d/master/{{item}}.conf owner=root group=nagios mode=0644
     with_items: "{{ groups['mon-server'] }}"
 
   - name: Create icinga global templates
     become: True
-    template: src={{item }}.j2 dest=/etc/icinga2/zones.d/global-templates/{{item }} owner=root group=root mode=0644
+    template: src=icinga2/{{item }}.j2 dest=/etc/icinga2/zones.d/global-templates/{{item }} owner=root group=root mode=0644
     notify: restart icinga
     with_items:
       - services.conf
@@ -284,7 +280,7 @@
 
   - name: Create icinga main configs
     become: True
-    template: src={{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
+    template: src=icinga2/{{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
     notify: restart icinga
     with_items:
       - icinga2.conf
@@ -298,7 +294,6 @@
     notify: restart icinga
     with_items:
       - command
-      - perfdata
       - graphite
       - ido-mysql
       - api
@@ -312,6 +307,7 @@
     notify: restart icinga
     with_items:
       - influxdb
+      - perfdata
     tags:
       - icconf
       - icfeatures
@@ -323,3 +319,4 @@
   - name: Ensure that the fpm/web user can access the icinga socket
     user: name=www-data append=yes groups="icingaweb2"
     notify: restart php-fpm
+# vim: set ts=8 sw=2 tw=0 et :

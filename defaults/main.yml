@@ -1,4 +1,6 @@
 ---
+mon_enable_notifications: False
+
 mon_icinga_base_url: "https://mon.sos.ethz.ch"
 mon_icinga_mysql_host: localhost
 mon_icinga_mysql_password: "mmNE6bIZF5qjaHDC8jeP9pNRI0j6He6j"
@@ -49,3 +51,12 @@ mon_prometheus_job_relabling:
     regex: '(.*)_ch$'
     replacement: '$1.ch'
     target_label: target
+  - source_labels: [__name__]
+    regex: 'go_.*'
+    action: drop
+  - source_labels: [__name__]
+    regex: 'prometheus_.*'
+    action: drop
+  - source_labels: [__name__]
+    regex: 'http_.*'
+    action: drop
