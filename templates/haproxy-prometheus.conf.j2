@@ -11,7 +11,7 @@ backend {{item}}-back-9100
 
 {% for item in groups['mon-client'] %}
 {% set ipidx=(1 + loop.index0) %}
-{% for item2 in hostvars[item]['ansible_local']['mon_prometheus_exporters'] %}
+{% for item2 in prmhosts[item] %}
 # {{ item }} / {{ item2 }}
 {% if item2 == "node" %}
 frontend {{item}}-front-9100

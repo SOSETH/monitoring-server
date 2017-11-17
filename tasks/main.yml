@@ -99,6 +99,14 @@
     tags:
       - pmconf
 
+  - name: Load client host details from local host
+    include_vars:
+      dir: "{{ playbook_dir }}/fetch/vars"
+      name: prmhosts
+
+  - name: Facts loaded
+    debug: msg="{{ prmhosts }}"
+
   - name: Configure prometheus haproxy dropin
     become: True
     template: src=haproxy-prometheus.conf.j2 dest=/etc/haproxy/conf.d/70-prometheus.conf mode=0644
@@ -319,4 +327,3 @@
   - name: Ensure that the fpm/web user can access the icinga socket
     user: name=www-data append=yes groups="icingaweb2"
     notify: restart php-fpm
-# vim: set ts=8 sw=2 tw=0 et :

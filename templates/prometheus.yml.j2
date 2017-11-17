@@ -46,7 +46,7 @@ scrape_configs:
   - job_name: '{{item}}'
     static_configs:
 {% set ipidx=(1 + loop.index0) %}
-{% for item2 in hostvars[item]['ansible_local']['mon_prometheus_exporters'] %}
+{% for item2 in prmhosts[item] %}
 {% if item2 == "node" %}
       - targets: ['127.43.1.{{ ipidx }}:9100']
 {% elif item2 == "ceph" %}
@@ -59,7 +59,7 @@ scrape_configs:
   - job_name: '{{item}}'
     static_configs:
 {% set ipidx=(1 + loop.index0) %}
-{% for item2 in hostvars[item]['ansible_local']['mon_prometheus_exporters'] %}
+{% for item2 in prmhosts[item] %}
 {% if item2 == "node" %}
       - targets: ['127.43.2.{{ ipidx }}:9100']
 {% elif item2 == "ceph" %}
