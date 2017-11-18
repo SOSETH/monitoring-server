@@ -146,10 +146,11 @@ apply Service "icinga" {
   vars.datgroup = "icinga"
 }
 
-apply Service "procs" for (procs => config in hosts.vars.procs) {
+apply Service "procs" {
   import "normal-service"
   check_command = "procs"
-  vars += config
+  vars += host.vars.procs
+  assign where host.vars.os == "Linux"
   vars.datgroup = "procs"
 }
 
@@ -171,17 +172,19 @@ apply Service "mem" {
   vars.mem_critical = 95
 }
 
-apply Service "load" for (load => config in hosts.vars.load) {
+apply Service "load" {
   import "normal-service"
   check_command = "load"
-  vars += config
+  assign where host.vars.os == "Linux"
+  vars += host.vars.load
   vars.datgroup = "load"
 }
 
-apply Service "apt" for (apt => config in hosts.vars.apt) {
+apply Service "apt" {
   import "normal-service"
   check_command = "apt"
-  vars += config
+  assign where host.vars.os == "Linux"
+  vars += host.vars.apt
   vars.datgroup = "apt"
 }
 
