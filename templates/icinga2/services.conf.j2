@@ -26,6 +26,15 @@ template Service "normal-service" {
   command_endpoint = host.name
 }
 
+template Service "long-service" {
+  import "generic-service"
+  vars.datitem = "local"
+  vars.notify = true
+  check_interval = 120s
+  check_period = "24x7"
+  command_endpoint = host.name
+}
+
 apply Service "disk " for (disk => config in host.vars.disk) {
   import "normal-service"
   check_command = "disk"
@@ -43,7 +52,7 @@ apply Service "iostat " for (iostat => config in host.vars.iostat) {
 }
 
 apply Service "smart " for (smart => config in host.vars.sata) {
-  import "normal-service"
+  import "long-service"
   check_command = "smartSOS"
 
   vars += config
@@ -52,7 +61,7 @@ apply Service "smart " for (smart => config in host.vars.sata) {
 }
 
 apply Service "sas " for (sas => config in host.vars.sas) {
-  import "normal-service"
+  import "long-service"
   check_command = "sasSOS"
 
   vars += config
