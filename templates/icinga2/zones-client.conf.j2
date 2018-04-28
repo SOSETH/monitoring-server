@@ -1,0 +1,7 @@
+object Endpoint "{{ hostvars[item]['ansible_fqdn'] }}" {
+  host = "{{ hostvars[item]['ansible_fqdn'] }}"
+}
+object Zone "{{ hostvars[item]['ansible_fqdn'] }}" {
+    endpoints = [ "{{ hostvars[item]['ansible_fqdn'] }}" ]
+    parent = "master"
+}

@@ -1,0 +1,15 @@
+object Zone "global-templates" {
+  global = true
+}
+
+object Zone "director-global" {
+  global = true
+}
+
+object Zone "master" {
+    // The "master" zone
+    endpoints = [ {% for host in groups['mon-server'] %}
+                     "{{ hostvars[host]['ansible_fqdn'] }}"{% if not loop.last %},{% endif %}
+                  {% endfor %}
+                ]
+}

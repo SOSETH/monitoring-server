@@ -16,6 +16,14 @@ template Host "generic-host" {
   check_interval = 1m
   retry_interval = 30s
 
+  check_command = "dummy"
+}
+
+template Host "mon-server-host" {
+  max_check_attempts = 3
+  check_interval = 1m
+  retry_interval = 30s
+
   check_command = "hostalive"
 }
 
@@ -53,7 +61,7 @@ template Notification "mail-host-notification" {
 
   vars += {
     notification_icingaweb2url = "https://{{ ansible_fqdn }}/icingaweb2/dashboard#!/icingaweb2"
-    notification_from = "Icinga 2 <root@sos.ethz.ch>"
+    notification_from = "Icinga 2 <{{ mon_icinga_mail_user }}@{{ mon_icinga_mail_domain }}>"
     notification_logtosyslog = true
   }
 
@@ -75,9 +83,34 @@ template Notification "mail-service-notification" {
 
   vars += {
     notification_icingaweb2url = "https://{{ ansible_fqdn }}/icingaweb2/dashboard#!/icingaweb2"
-    notification_from = "Icinga 2 <root@sos.ethz.ch>"
+    notification_from = "Icinga 2 <{{ mon_icinga_mail_user }}@{{ mon_icinga_mail_domain }}>"
     notification_logtosyslog = true
   }
 
   period = "24x7"
+}
+
+apply Dependency "Manual-Parenthost" for (parent in service.vars.parent) to Service {
+    parent_host_name = parent
+    states = [ Up ]
+    disable_checks = true
+    ignore_soft_states = false
+    disable_notifications = true
+}
+
+apply ScheduledDowntime "backup-downtime" to Host {
+  author = "icingaadmin"
+  comment = "Clients may go down anytime"
+
+  ranges = {
+    monday = "00:00-23:59"
+    tuesday = "00:00-23:59"
+    wednesday = "00:00-23:59"
+    thursday = "00:00-23:59"
+    friday = "00:00-23:59"
+    saturday = "00:00-23:59"
+    sunday = "00:00-23:59"
+  }
+
+  assign where host.vars.is_client
 }

@@ -13,14 +13,21 @@ object ApiListener "api" {
 }
 
 object ApiUser "director" {
-  password = "director"
+  password = "{{ mon_icinga_director_password }}"
   permissions = [ "*" ]
 }
 
 {% for host in groups['mon-server'] %}
-{% if host != ansible_fqdn %}
-object ApiUser "{{ host }}" {
-  client_cn = "{{ host }}"
+{% if hostvars[host]['ansible_fqdn'] != ansible_fqdn %}
+object ApiUser "{{ hostvars[host]['ansible_fqdn'] }}" {
+  client_cn = "{{ hostvars[host]['ansible_fqdn'] }}"
 }
 {% endif %}
+{% endfor %}
+
+{% for user in mon_extra_api_users|default([]) %}
+object ApiUser "{{ user }}" {
+  client_cn = "{{ user }}"
+  permissions = [ "*" ]
+}
 {% endfor %}

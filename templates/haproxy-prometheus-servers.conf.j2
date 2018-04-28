@@ -1,0 +1,17 @@
+frontend {{ item.1 }}-front-9100
+	bind 127.43.1.{{1 + item.0}}:9100
+	mode tcp
+	default_backend {{ item.1 }}-back-9100
+
+backend {{ item.1 }}-back-9100
+	mode tcp
+	server remote {{ hostvars[item.1]['ansible_fqdn'] }}:9101 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required
+
+frontend {{ item.1 }}-front-9110
+	bind 127.43.1.{{1 + item.0 }}:9111
+	mode tcp
+	default_backend {{ item.1 }}-back-9110
+
+backend {{ item.1 }}-back-9110
+	mode tcp
+	server remote {{ hostvars[item.1]['ansible_fqdn'] }}:9110 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required

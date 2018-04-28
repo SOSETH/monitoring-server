@@ -103,21 +103,157 @@
     include_vars:
       dir: "{{ playbook_dir }}/fetch/vars"
       name: prmhosts
-
-  - name: Facts loaded
-    debug: msg="{{ prmhosts }}"
-
-  - name: Configure prometheus haproxy dropin
-    become: True
-    template: src=haproxy-prometheus.conf.j2 dest=/etc/haproxy/conf.d/70-prometheus.conf mode=0644
-    notify: restart haproxy
     tags:
       - pmconf
 
-  - name: Configure prometheus
+  - name: Facts loaded
+    debug: msg="{{ prmhosts }}"
+    tags:
+      - pmconf
+
+  - name: Check if we detected any host with ceph
+    with_dict: "{{ prmhosts }}"
+    when: "'ceph' in item.value"
+    set_fact:
+      have_ceph: True
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin (clients)
     become: True
-    template: src=prometheus.yml.j2 dest=/etc/prometheus/prometheus.yml mode=0644
+    notify: restart haproxy
+    template:
+      src: "haproxy-prometheus-client.conf.j2"
+      dest: "/etc/haproxy/conf.d/70-prometheus-client-{{ item.1 }}.conf"
+      mode: 0644
+    with_indexed_items: "{{ groups['mon-client'] }}"
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin (servers)
+    become: True
+    notify: restart haproxy
+    template:
+      src: "haproxy-prometheus-servers.conf.j2"
+      dest: "/etc/haproxy/conf.d/71-prometheus-server-{{ item.1 }}.conf"
+      mode: 0644
+    with_indexed_items: "{{ groups['mon-server'] }}"
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin (base)
+    become: True
+    notify: restart haproxy
+    template:
+      src: "haproxy-prometheus.conf.j2"
+      dest: "/etc/haproxy/conf.d/72-prometheus.conf"
+      mode: 0644
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin (ceph)
+    become: True
+    notify: restart haproxy
+    when: have_ceph
+    template:
+      src: "haproxy-prometheus-ceph.conf.j2"
+      dest: "/etc/haproxy/conf.d/73-prometheus-ceph.conf"
+      mode: 0644
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Ensure prometheus dropin directories exists
+    become: True
+    file: path="{{ item }}" state=directory owner=root group=root mode=0755
+    with_items:
+      - /etc/systemd/system/prometheus.service.d
+      - /etc/prometheus/conf.d
+    tags:
+      - pmconf
+
+  - name: Install prometheus dropin support script
+    become: True
+    copy:
+      src: "gen-conf.sh"
+      dest: "/etc/prometheus/gen-conf.sh"
+      owner: root
+      group: root
+      mode: 0755
+    tags:
+      - pmconf
+
+  - name: Install prometheus systemd drop-in
+    become: True
+    copy:
+      src: "prometheus-dropin.conf"
+      dest: /etc/systemd/system/prometheus.service.d/ansible.conf
+      owner: root
+      group: root
+      mode: 0644
+    register: dropin
+    tags:
+      - pmconf
+
+  - name: Reload systemd
+    become: True
+    when: dropin.changed
+    command: systemctl daemon-reload
+    tags:
+      - pmconf
+
+  - name: Configure prometheus (base)
+    become: True
     notify: restart prometheus
+    template:
+      src: "prometheus-base.yml.j2"
+      dest: "/etc/prometheus/conf.d/01-base.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
+    tags:
+      - pmconf
+
+  - name: Configure prometheus (servers)
+    become: True
+    notify: restart prometheus
+    template:
+      src: "prometheus-server.yml.j2"
+      dest: "/etc/prometheus/conf.d/02-server-{{ item.1 }}.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
+    with_indexed_items: "{{ groups['mon-server'] }}"
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Configure prometheus (clients)
+    become: True
+    notify: restart prometheus
+    template:
+      src: "prometheus-client.yml.j2"
+      dest: "/etc/prometheus/conf.d/03-client-{{ item.1 }}.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
+    with_indexed_items: "{{ groups['mon-client'] }}"
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Configure prometheus (ceph)
+    become: True
+    notify: restart prometheus
+    when: have_ceph
+    template:
+      src: "prometheus-ceph.yml.j2"
+      dest: "/etc/prometheus/conf.d/04-ceph.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
     tags:
       - pmconf
 
@@ -242,29 +378,39 @@
 
   - name: Load configuration facts
     set_fact:
-      icinga_hosts_found: "{{icinga_hosts_found|append(groups['mon-server'], 'icinga_hosts_found'+ansible_fqdn)|append(groups['mon-client'], 'icinga_hosts_found'+ansible_fqdn)}}"
-    
+      icinga_hosts_found: "{{ groups['mon-server'] }} + {{ groups['mon-client'] }}"
+
   - name: Create client host directories
     become: true
-    file: path=/etc/icinga2/zones.d/{{item}} state=directory owner=root group=nagios mode=0755
+    file: path="/etc/icinga2/zones.d/{{ hostvars[item]['ansible_fqdn'] }}" state=directory owner=root group=nagios mode=0755
     with_items: "{{ groups['mon-client'] }}"
+    when: "'ansible_fqdn' in hostvars[item]"
+    failed_when: False # Do not fail when we can't upload a host. That simply means that we're not gonna update it
 
   - name: Create server/system host directories
     become: true
-    file: path=/etc/icinga2/zones.d/{{item}} state=directory owner=root group=nagios mode=0755
+    file: path="/etc/icinga2/zones.d/{{ item }}" state=directory owner=root group=nagios mode=0755
     with_items:
       - master
       - global-templates
 
   - name: Upload client host details
     become: true
-    copy: src=fetch/icc/{{item}}.conf dest=/etc/icinga2/zones.d/{{item}}/{{item}}.conf owner=root group=nagios mode=0644
+    copy: src="fetch/icc/{{ hostvars[item]['ansible_fqdn'] }}.conf" dest="/etc/icinga2/zones.d/{{ hostvars[item]['ansible_fqdn'] }}/{{ hostvars[item]['ansible_fqdn'] }}.conf" owner=root group=nagios mode=0644
     with_items: "{{ groups['mon-client'] }}"
+    when: "'ansible_fqdn' in hostvars[item]"
+    failed_when: False # Do not fail when we can't upload a host. That simply means that we're not gonna update it
+
+  - name: Upload client host check details
+    become: true
+    copy: src="fetch/icc/clcheck-{{ hostvars[item]['ansible_fqdn'] }}.conf" dest="/etc/icinga2/zones.d/master/{{ hostvars[item]['ansible_fqdn'] }}.conf" owner=root group=nagios mode=0644
+    with_items: "{{ groups['mon-client'] }}"
+    when: "'ansible_fqdn' in hostvars[item]"
     failed_when: False # Do not fail when we can't upload a host. That simply means that we're not gonna update it
 
   - name: Upload server host details
     become: true
-    copy: src=fetch/icc/{{item}}.conf dest=/etc/icinga2/zones.d/master/{{item}}.conf owner=root group=nagios mode=0644
+    copy: src="fetch/icc/{{ hostvars[item]['ansible_fqdn'] }}.conf" dest="/etc/icinga2/zones.d/master/{{ hostvars[item]['ansible_fqdn'] }}.conf" owner=root group=nagios mode=0644
     with_items: "{{ groups['mon-server'] }}"
 
   - name: Create icinga global templates
@@ -274,9 +420,6 @@
     with_items:
       - services.conf
     tags: icconf
-      #      - templates.conf
-      #      - notifications.conf
-      #      - users.conf
 
   - name: Remove old icinga config files from previous versions of this role
     become: True
@@ -286,6 +429,45 @@
       - services.conf
     tags: icconf
 
+  - name: Ensure icinga dropin directories exists
+    become: True
+    file: path="{{ item }}" state=directory owner=root group=root mode=0755
+    with_items:
+      - /etc/systemd/system/icinga2.service.d
+      - /etc/icinga2/ansb-zones.d
+    tags:
+      - icconf
+
+  - name: Install icinga zone assembly support script
+    become: True
+    copy:
+      src: "gen-zones.sh"
+      dest: "/etc/icinga2/gen-zones.sh"
+      owner: root
+      group: root
+      mode: 0755
+    tags:
+      - icconf
+
+  - name: Install icinga systemd drop-in
+    become: True
+    copy:
+      src: "icinga2-dropin.conf"
+      dest: /etc/systemd/system/icinga2.service.d/ansible.conf
+      owner: root
+      group: root
+      mode: 0644
+    register: icdropin
+    tags:
+      - icconf
+
+  - name: Reload systemd
+    become: True
+    when: icdropin.changed
+    command: systemctl daemon-reload
+    tags:
+      - icconf
+
   - name: Create icinga main configs
     become: True
     template: src=icinga2/{{ item }}.j2 dest=/etc/icinga2/{{ item }} owner=root group=root mode=0644
@@ -293,7 +475,44 @@
     with_items:
       - icinga2.conf
       - constants.conf
-      - zones.conf
+    tags: icconf
+
+  - name: Create icinga server zones
+    become: True
+    notify: restart icinga
+    failed_when: False
+    template:
+      src: "icinga2/zones-server.conf.j2"
+      dest: "/etc/icinga2/ansb-zones.d/sv-{{ item }}"
+      owner: root
+      group: root
+      mode: 0644
+    with_items: "{{ groups['mon-server'] }}"
+    tags: icconf
+
+  - name: Create icinga client zones
+    become: True
+    notify: restart icinga
+    failed_when: False
+    template:
+      src: "icinga2/zones-client.conf.j2"
+      dest: "/etc/icinga2/ansb-zones.d/cl-{{ item }}"
+      owner: root
+      group: root
+      mode: 0644
+    with_items: "{{ groups['mon-client'] }}"
+    tags: icconf
+
+  - name: Create icinga master zone
+    become: True
+    notify: restart icinga
+    failed_when: False
+    template:
+      src: "icinga2/zones-master.conf.j2"
+      dest: "/etc/icinga2/ansb-zones.d/master"
+      owner: root
+      group: root
+      mode: 0644
     tags: icconf
 
   - name: Enable icinga modules
@@ -321,9 +540,18 @@
       - icfeatures
 
   - name: Set php fpm default timezone
+    become: True
     lineinfile: dest=/etc/php/7.0/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
     notify: restart php-fpm
 
   - name: Ensure that the fpm/web user can access the icinga socket
+    become: True
     user: name=www-data append=yes groups="icingaweb2"
     notify: restart php-fpm
+
+  - name: Ensure that services are started and enabled
+    become: True
+    service: name={{ item }} state=started enabled=yes
+    with_items:
+      - tcpdup
+      - graphite-exporter

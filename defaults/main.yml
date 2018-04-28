@@ -17,6 +17,10 @@ mon_icinga_graphite_port: 2004
 mon_icinga_grafana_base: "{{ icinga_base_url }}/grafana"
 mon_icinga_master_fqdn: mon.sos.ethz.ch
 mon_icinga_default_checks: ["apt", "disk /", "disk", "icinga", "iostat", "load", "mem", "procs", "users"]
+mon_icinga_mailbin: "/usr/sbin/sendmail"
+mon_icinga_mail_domain: sos.ethz.ch
+mon_icinga_mail_user: root
+mon_icinga_director_password: "kaBcLoG1Zkn0MWSSP46G=m^CpnbwYP"
 
 mon_prometheus_job_relabling:
   - source_labels: [job]
@@ -60,3 +64,6 @@ mon_prometheus_job_relabling:
   - source_labels: [__name__]
     regex: 'http_.*'
     action: drop
+
+# DON'T TOUCH:
+have_ceph: False

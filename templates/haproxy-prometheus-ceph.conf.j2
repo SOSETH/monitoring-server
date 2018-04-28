@@ -1,0 +1,17 @@
+frontend ceph-prm
+	bind 127.43.2.1:9128
+	mode http
+	default_backend ceph-back
+
+backend ceph-back
+	mode http
+	option httpchk get /metrics
+	http-check expect status 200
+{% for item in groups['mon-client'] %}
+{% set ipidx=(1 + loop.index0) %}
+{% for item2 in prmhosts[item] %}
+{% if item2 == "ceph" %}
+	server {{ item }} {{ hostvars[item]['ansible_fqdn'] }}:9228 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
+{% endif %}
+{% endfor %}
+{% endfor %}

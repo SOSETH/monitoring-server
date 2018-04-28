@@ -1,0 +1,8 @@
+  - job_name: '{{ hostvars[item.1]['ansible_fqdn'] }}'
+    static_configs:
+{% set ipidx=(1 + item.0) %}
+{% for item2 in prmhosts[item.1] %}
+{% if item2 == "node" %}
+      - targets: ['127.43.2.{{ ipidx }}:9100']
+{% endif %}
+{% endfor %}
