@@ -17,13 +17,9 @@
       - php-imagick
       - php-intl
       - prometheus
-      - libboost-system1.62.0
-      - libboost-thread1.62.0
-      - libboost-regex1.62.0
-      - libboost-chrono1.62.0
-      - libboost-date-time1.62.0
-      - libboost-atomic1.62.0
       - unzip
+      - tcpdup # sos-monitoring-tools
+      - prometheus-graphite-exporter # sos-monitoring-tools
     tags:
       - icconf
       - pmconf
@@ -52,30 +48,6 @@
     become: True
     shell: mv /usr/share/icingaweb2/modules/icingaweb2-module-director-1.4.0 /usr/share/icingaweb2/modules/director
     when: not icdstat.stat.exists
-
-  - name: Check tcpdup version
-    become: True
-    shell: apt-cache policy tcpdup | grep Install | head -n1 | awk '{print $2}'
-    register: swversion
-    failed_when: False
-    changed_when: False
-    tags:
-      - pmconf
-
-  - name: Copy tcpdup package
-    become: True
-    copy: src=tcpdup_0.1_amd64.deb dest=/tmp/tcpdup_0.1_amd64.deb owner=root group=root mode=0644
-    when: swversion.stdout != "0.1"
-    tags:
-      - pmconf
-
-  - name: Install tcpdup
-    become: True
-    command: dpkg -i --force-overwrite /tmp/tcpdup_0.1_amd64.deb
-    when: swversion.stdout != "0.1"
-    notify: restart tcpdup
-    tags:
-      - pmconf
 
   - name: Configure tcpdup
     become: True
@@ -257,32 +229,9 @@
     tags:
       - pmconf
 
-  - name: Create prometheus graphite exporter dir
+  - name: Install prometheus graphite exporter mapping
     become: True
-    file: path=/opt/grexp state=directory owner=root group=root mode=0755
-    tags:
-      - icconf
-      - pmconf
-
-  - name: Install prometheus graphite exporter
-    become: True
-    copy: src=graphite_exporter dest=/opt/grexp/graphite_exporter owner=root group=root mode=0755
-    notify: restart grexp
-    tags:
-      - icconf
-      - pmconf
-
-  - name: Install prometheus graphite exporter service
-    become: True
-    template: src=graphite-exporter.service.j2 dest=/etc/systemd/system/graphite-exporter.service owner=root group=root mode=0644
-    notify: reload systemd
-    tags:
-      - icconf
-      - pmconf
-
-  - name: Install prometheus graphite exporter service
-    become: True
-    template: src=mapping.j2 dest=/opt/grexp/mapping owner=root group=root mode=0644
+    template: src=mapping.j2 dest=/etc/prometheus/graphite_exporter_mapping owner=root group=root mode=0644
     notify: restart grexp
     tags:
       - icconf
