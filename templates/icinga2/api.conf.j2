@@ -3,10 +3,6 @@
  */
 
 object ApiListener "api" {
-  cert_path = SysconfDir + "/icinga2/pki/server.crt"
-  key_path = SysconfDir + "/icinga2/pki/server.key"
-  ca_path = SysconfDir + "/icinga2/pki/ca-mag.crt"
-
   ticket_salt = TicketSalt
   accept_config = true
   accept_commands = true
