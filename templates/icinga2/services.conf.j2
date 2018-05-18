@@ -110,6 +110,15 @@ apply Service "ipmi " for (ipmi => config in host.vars.ipmi) {
   vars.datitem = ipmi
 }
 
+apply Service "snmp " for (snmp => config in host.vars.snmp) {
+  import "normal-service"
+  check_command = "snmp"
+
+  vars += config
+  vars.datgroup = "snmp"
+  vars.datitem = snmp
+}
+
 apply Service "https " for (https => config in host.vars.https) {
   import "normal-service"
   check_command = "http"
