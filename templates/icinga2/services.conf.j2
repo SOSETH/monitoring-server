@@ -205,7 +205,7 @@ apply Service "apt" {
   vars.datgroup = "apt"
 }
 
-apply Service "swport " for (swport => config in hosts.vars.snmpif) {
+apply Service "swport " for (swport => config in hosts.vars.swport) {
   import "normal-service"
   check_command = "snmpif"
   vars += config
