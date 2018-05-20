@@ -52,5 +52,7 @@ mon_icinga_grafana_base: "{{ icinga_base_url }}/grafana"
 mon_icinga_default_checks: ["apt", "disk /", "disk", "icinga", "iostat", "load", "mem", "procs", "users"]
 mon_icinga_mailbin: "/usr/sbin/sendmail"
 
+mon_forward_map: []
+
 # DON'T TOUCH:
 have_ceph: False

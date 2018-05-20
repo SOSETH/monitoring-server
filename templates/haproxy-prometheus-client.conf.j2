@@ -1,3 +1,4 @@
+# {{ item }}
 {% set ipidx=(1 + item.0) %}
 {% for item2 in prmhosts[item.1] %}
 # {{ item.1 }} / {{ item2 }}
@@ -9,6 +10,10 @@ frontend {{ item.1 }}-front-9100
 
 backend {{ item.1 }}-back-9100
 	mode tcp
-	server remote {{ hostvars[item.1]['ansible_fqdn'] }}:9101 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required
+{% if hostvars[item.1]['ansible_fqdn'] in mon_forward_map %}
+	server remote {{ mon_forward_map[hostvars[item.1]['ansible_fqdn']][9101] }} ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
+{% else %}
+	server remote {{ hostvars[item.1]['ansible_fqdn'] }}:9101 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
+{% endif %}
 {% endif %}
 {% endfor %}

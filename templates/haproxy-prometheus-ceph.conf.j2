@@ -11,7 +11,11 @@ backend ceph-back
 {% set ipidx=(1 + loop.index0) %}
 {% for item2 in prmhosts[item] %}
 {% if item2 == "ceph" %}
+{% if hostvars[item]['ansible_fqdn'] in mon_forward_map %}
+	server {{ item }} {{ mon_forward_map[hostvars[item]['ansible_fqdn']][9228] }} ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
+{% else %}
 	server {{ item }} {{ hostvars[item]['ansible_fqdn'] }}:9228 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endfor %}
