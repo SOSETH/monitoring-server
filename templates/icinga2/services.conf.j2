@@ -101,6 +101,12 @@ apply Service "ceph-new" {
   vars.datitem = host.name
 }
 
+apply Service "host " for (host => config in host.vars.host_check) {
+  import "generic-service"
+  check_command = config.check_host_cmd
+  zone = "master"
+}
+
 apply Service "ipmi " for (ipmi => config in host.vars.ipmi) {
   import "normal-service"
   check_command = "ipmi"
