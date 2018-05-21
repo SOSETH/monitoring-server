@@ -241,6 +241,7 @@ apply Service "ups battery" {
   vars.datgroup = "ups"
 }
 
+{% if mon_ups_check_temp %}
 apply Service "ups temp" {
   import "normal-service"
   check_command = "apcupsd"
@@ -250,6 +251,7 @@ apply Service "ups temp" {
   vars.check = "itemp"
   vars.datgroup = "ups"
 }
+{% endif %}
 
 apply Service "ups load" {
   import "normal-service"
