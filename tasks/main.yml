@@ -505,5 +505,5 @@
     systemd: name={{ item }} state=started enabled=yes
     with_items:
       - tcpdup
-      - graphite-exporter
+      - prometheus-graphite-exporter
       - prometheus

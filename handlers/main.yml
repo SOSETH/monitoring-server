@@ -26,7 +26,7 @@
 
   - name: restart grexp
     become: True
-    service: name=graphite-exporter enabled=yes state=restarted
+    service: name=prometheus-graphite-exporter enabled=yes state=restarted
 
   - name: restart tcpdup
     become: True

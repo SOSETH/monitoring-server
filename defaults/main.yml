@@ -55,6 +55,7 @@ mon_icinga_mailbin: "/usr/sbin/sendmail"
 mon_ups_check_temp: True
 
 mon_forward_map: []
+mon_snmp_map: []
 
 # DON'T TOUCH:
 have_ceph: False

@@ -2,18 +2,25 @@
 {% set ipidx=(1 + item.0) %}
 {% for item2 in prmhosts[item.1] %}
 # {{ item.1 }} / {{ item2 }}
+{% if item2 == "node" or item2 == "snmp" %}
 {% if item2 == "node" %}
-frontend {{ item.1 }}-front-9100
-	bind 127.43.2.{{ ipidx }}:9100
+{% set port=9100 %}
+{% set portback=9101 %}
+{% else %}
+{% set port=9220 %}
+{% set portback=9220 %}
+{% endif %}
+frontend {{ item.1 }}-front-{{ port }}
+	bind 127.43.2.{{ ipidx }}:{{ port }}
 	mode tcp
-	default_backend {{ item.1 }}-back-9100
+	default_backend {{ item.1 }}-back-{{ port }}
 
-backend {{ item.1 }}-back-9100
+backend {{ item.1 }}-back-{{ port }}
 	mode tcp
 {% if hostvars[item.1]['ansible_fqdn'] in mon_forward_map %}
-	server remote {{ mon_forward_map[hostvars[item.1]['ansible_fqdn']][9101] }} ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
+	server remote {{ mon_forward_map[hostvars[item.1]['ansible_fqdn']][portback] }} ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
 {% else %}
-	server remote {{ hostvars[item.1]['ansible_fqdn'] }}:9101 ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
+	server remote {{ hostvars[item.1]['ansible_fqdn'] }}:{{ portback }} ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
 {% endif %}
 {% endif %}
 {% endfor %}
