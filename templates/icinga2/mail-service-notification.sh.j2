@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 #
+{% if mon_use_sendmsg %}
+{% if mon_enable_notifications %}
+sendmsg icingaService "$@"
+{% endif %}
+{% else %}
 # Copyright (C) 2012-2017 Icinga Development Team (https://www.icinga.com/)
 
 PROG="`basename $0`"
@@ -161,4 +166,5 @@ else
   /usr/bin/printf "%b" "$NOTIFICATION_MESSAGE" \
   | $MAILBIN -s "$SUBJECT" $USEREMAIL
 fi
+{% endif %}
 {% endif %}

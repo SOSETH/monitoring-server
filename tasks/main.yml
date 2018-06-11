@@ -24,6 +24,19 @@
       - icconf
       - pmconf
 
+  - name: Install sendmsg
+    when: mon_use_sendmsg
+    apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
+    with_items:
+      - sendmsg
+    tags: icconf
+
+  - name: Create sendmsg config
+    become: True
+    when: mon_use_sendmsg
+    copy: content="{{ mon_sendmsg_config|to_nice_yaml }}" dest=/etc/sendmsg.yml owner=root group=root mode=0644
+    tags: icconf
+
   - name: Ensure that php5-fpm is disabled
     become: True
     shell: systemctl stop php5-fpm && systemctl disable php5-fpm
