@@ -69,6 +69,23 @@ apply Service "sas " for (sas => config in host.vars.sas) {
   vars.datitem = vars.device
 }
 
+apply Service "megaraid" {
+  import "normal-service"
+  check_command = "megaraid"
+  assign where host.vars.megaraid
+  vars.datgroup = "ceph"
+  vars.datitem = host.name
+}
+
+apply Service "mr-sas " for (sas => config in host.vars.mrsas) {
+  import "long-service"
+  check_command = "sasSOS"
+
+  vars += config
+  vars.datgroup = "smart"
+  vars.datitem = vars.device
+}
+
 apply Service "sensor " for (sensor => config in host.vars.sensor) {
   import "normal-service"
   check_command = "sensor"
