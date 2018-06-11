@@ -285,3 +285,11 @@ apply Service "ups load" {
   vars.check = "loadpct"
   vars.datgroup = "ups"
 }
+
+apply ScheduledDowntime "downtime " for (downtime => config in host.vars.downtime) to Service {
+  author = "icingaadmin"
+  comment = "Configured via ansible"
+
+  ranges = config.time
+  assign where service.vars.datgroup in config.service_groups
+}
