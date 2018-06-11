@@ -99,6 +99,18 @@
     tags:
       - pmconf
 
+  - name: Configure prometheus listen settings
+    become: True
+    notify: restart prometheus
+    template:
+      src: "prometheus.j2"
+      dest: "/etc/default/prometheus"
+      owner: "root"
+      group: "root"
+      mode: "0644"
+    tags:
+      - pmconf
+
   - name: Configure prometheus haproxy dropin (clients)
     become: True
     notify: restart haproxy
