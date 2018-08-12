@@ -333,7 +333,6 @@
       - templates.conf
       - notifications.conf
       - users.conf
-      - services.conf
     tags: icconf
 
   - name: Create icinga scripts
