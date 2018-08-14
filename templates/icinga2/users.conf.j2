@@ -9,7 +9,7 @@ object User "icingaadmin" {
   display_name = "Icinga 2 Admin"
   groups = [ "icingaadmins" ]
 
-  email = "monitoring@sos.ethz.ch"
+  email = "{{ mon_icinga_mail_user }}@{{ mon_icinga_mail_domain }}"
 }
 
 object UserGroup "icingaadmins" {
