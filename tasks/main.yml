@@ -25,10 +25,11 @@
       - pmconf
 
   - name: Install sendmsg
-    when: mon_use_sendmsg
+    become: True
     apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
     with_items:
       - sendmsg
+    when: mon_use_sendmsg
     tags: icconf
 
   - name: Create sendmsg config
@@ -332,7 +333,6 @@
       - templates.conf
       - notifications.conf
       - users.conf
-      - services.conf
     tags: icconf
 
   - name: Create icinga scripts
