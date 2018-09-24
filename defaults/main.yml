@@ -10,6 +10,7 @@ mon_icinga_mail_domain: foo.example.com
 mon_icinga_mail_user: root
 mon_icinga_director_password: False
 mon_use_sendmsg: False
+mon_setup_sendmsg: "{{ mon_use_sendmsg }}"
 mon_sendmsg_config: []
 
 # Things you will probably want to overrride
