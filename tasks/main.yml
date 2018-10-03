@@ -20,11 +20,13 @@
       - php-intl
       - prometheus
       - unzip
+      - git
       - tcpdup # sos-monitoring-tools
       - prometheus-graphite-exporter # sos-monitoring-tools
     tags:
       - icconf
       - pmconf
+      - icwconf
 
   - name: Install sendmsg
     become: True

@@ -66,6 +66,14 @@ mon_icingaweb_ldap_bindpwd: ""
 mon_icingaweb_ldap_roles: []
 
 mon_icingaweb_dbauth: False
+mon_icingaweb_extramodules:
+  - name: elasticsearch
+    repo: https://github.com/Icinga/icingaweb2-module-elasticsearch.git
+    commit: 323481bfe5609194d2f8300349bd9dd6f114b187
+    configs:
+mon_icingaweb_extraconfigs:
+  - elasticsearch/eventtypes.ini
+  - elasticsearch/instances.ini
 
 mon_ups_check_temp: True
 

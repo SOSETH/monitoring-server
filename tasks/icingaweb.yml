@@ -127,3 +127,34 @@
       state: link
     with_items:
       - monitoring
+
+  - name: Install extra icingawebmodules
+    become: True
+    git:
+      repo: "{{ item.repo }}"
+      dest: "/usr/share/icingaweb2/modules/{{ item.name }}"
+      update: yes
+      clone: yes
+      version: "{{ item.commit }}"
+      ssh_opts: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+    with_items: "{{ mon_icingaweb_extramodules }}"
+
+  - name: Ensure extra module config directory exists
+    become: True
+    file: path="/etc/icingaweb2/modules/{{ item.name }}" state=directory owner=www-data group=icingaweb2 mode=0750
+    with_items: "{{ mon_icingaweb_extramodules }}"
+
+  - name: Configure extra modules
+    become: True
+    template: src="icingaweb2/{{ item }}.j2" dest="/etc/icingaweb2/modules/{{ item }}" owner=www-data group=icingaweb2 mode=0640
+    with_items: "{{ mon_icingaweb_extraconfigs }}"
+
+  - name: Enable extra icingaweb modules
+    become: True
+    file:
+      src: "/usr/share/icingaweb2/modules/{{ item.name }}"
+      dest: "/etc/icingaweb2/enabledModules/{{ item.name }}"
+      owner: www-data
+      group: icingaweb2
+      state: link
+    with_items: "{{ mon_icingaweb_extramodules }}"
