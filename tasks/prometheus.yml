@@ -212,3 +212,8 @@
       - tcpdup
       - prometheus-graphite-exporter
       - prometheus
+
+  - name: Create InfluxDB database for prometheus
+    become: True
+    when: mon_prometheus_dump_to_influxdb
+    command: influx -execute 'CREATE DATABASE prometheus'

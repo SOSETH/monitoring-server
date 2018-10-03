@@ -18,11 +18,25 @@
       - php-fpm
       - php-imagick
       - php-intl
-      - prometheus
       - unzip
       - git
       - tcpdup # sos-monitoring-tools
       - prometheus-graphite-exporter # sos-monitoring-tools
+    tags:
+      - icconf
+      - pmconf
+      - icwconf
+
+  - name: Install packages from backports
+    become: True
+    apt:
+      name: "{{ item }}"
+      state: present
+      update_cache: yes
+      cache_valid_time: 1800
+      default_release: "{{ ansible_distribution_release }}-backports"
+    with_items:
+      - prometheus
     tags:
       - icconf
       - pmconf

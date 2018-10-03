@@ -10,6 +10,11 @@ global:
   external_labels:
       monitor: 'example'
 
+{% if mon_prometheus_dump_to_influxdb %}
+remote_write:
+  - url: "http://localhost:8086/api/v1/prom/write?db=prometheus"
+{% endif %}
+
 # Load and evaluate rules in this file every 'evaluation_interval' seconds.
 rule_files:
   # - "first.rules"

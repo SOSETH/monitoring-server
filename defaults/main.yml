@@ -75,6 +75,8 @@ mon_icingaweb_extraconfigs:
   - elasticsearch/eventtypes.ini
   - elasticsearch/instances.ini
 
+mon_prometheus_dump_to_influxdb: False
+
 mon_ups_check_temp: True
 
 mon_forward_map: []
