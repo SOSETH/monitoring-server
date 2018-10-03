@@ -1,9 +1,11 @@
 ---
   - name: Ensure apache2 is not installed
+    when: mon_prevent_apache
     become: True
     apt: name=apache2 state=absent
 
   - name: Prevent apache2 from being installed
+    when: mon_prevent_apache
     become: True
     copy: src=noapache.conf dest=/etc/apt/preferences.d/noapache
 
