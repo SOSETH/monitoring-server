@@ -24,9 +24,32 @@
     shell: mv /usr/share/icingaweb2/modules/icingaweb2-module-director-1.4.0 /usr/share/icingaweb2/modules/director
     when: not icdstat.stat.exists
 
+  - name: Set db state (dbauth active)
+    when: mon_icingaweb_dbauth
+    set_fact:
+      mon_icingaweb_db_state: present
+
+  - name: Set db state (dbauth inactive)
+    when: not mon_icingaweb_dbauth
+    set_fact:
+      mon_icingaweb_db_state: absent
+
   - name: Create database for icingaweb
     become: True
-    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_web_database }} state=present
+    mysql_db:
+      login_host: "{{ mon_icinga_mysql_host }}"
+      name: "{{ mon_icinga_mysql_web_database }}"
+      state: "{{ mon_icingaweb_db_state }}"
+    tags: icdb
+
+  - name: Create database user for icingaweb
+    become: True
+    mysql_user:
+      login_host: "{{ mon_icinga_mysql_host }}"
+      name: "{{ mon_icinga_mysql_web_user }}"
+      password: "{{ mon_icinga_mysql_web_password }}"
+      priv: "{{ mon_icinga_mysql_web_database }}.*:ALL"
+      state: "{{ mon_icingaweb_db_state }}"
     tags: icdb
 
   - name: Create database for icingadirector
@@ -39,11 +62,6 @@
     become: True
     mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_director_database }} state=import encoding="utf8" target="/usr/share/icingaweb2/modules/director/schema/mysql.sql"
     when: ddbcreated.changed
-    tags: icdb
-
-  - name: Create database user for icingaweb
-    become: True
-    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name="{{ mon_icinga_mysql_web_user }}" password="{{ mon_icinga_mysql_web_password }}" priv="{{ mon_icinga_mysql_web_database }}.*:ALL"
     tags: icdb
 
   - name: Create database user for icingaweb-director
@@ -72,3 +90,40 @@
     become: True
     user: name=www-data append=yes groups="icingaweb2"
     notify: restart php-fpm
+
+  - name: Configure icingaweb
+    become: True
+    template: src="icingaweb2/{{ item }}.j2" dest="/etc/icingaweb2/{{ item }}" owner=www-data group=icingaweb2 mode=0640
+    with_items:
+      - authentication.ini
+      - config.ini
+      - groups.ini
+      - resources.ini
+      - roles.ini
+
+  - name: Ensure icingaweb monitoring module config directory exists
+    become: True
+    file: path="{{ item }}" state=directory owner=www-data group=icingaweb2 mode=0750
+    with_items:
+      - /etc/icingaweb2/modules
+      - /etc/icingaweb2/modules/monitoring
+      - /etc/icingaweb2/enabledModules
+
+  - name: Configure icingaweb monitoring module
+    become: True
+    template: src="icingaweb2/monitoring/{{ item }}.j2" dest="/etc/icingaweb2/modules/monitoring/{{ item }}" owner=www-data group=icingaweb2 mode=0640
+    with_items:
+      - backends.ini
+      - commandtransports.ini
+      - config.ini
+
+  - name: Enable icingaweb modules
+    become: True
+    file:
+      src: "/usr/share/icingaweb2/modules/{{ item }}"
+      dest: "/etc/icingaweb2/enabledModules/{{ item }}"
+      owner: www-data
+      group: icingaweb2
+      state: link
+    with_items:
+      - monitoring

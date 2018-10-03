@@ -42,4 +42,7 @@
 
   - import_tasks: prometheus.yml
   - import_tasks: icingaweb.yml
+    tags:
+      - icconf
+      - icwconf
   - import_tasks: icinga.yml

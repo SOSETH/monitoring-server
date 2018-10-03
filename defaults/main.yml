@@ -56,6 +56,17 @@ mon_icinga_grafana_base: "{{ icinga_base_url }}/grafana"
 mon_icinga_default_checks: ["apt", "disk /", "disk", "icinga", "iostat", "load", "mem", "procs", "users"]
 mon_icinga_mailbin: "/usr/sbin/sendmail"
 
+mon_icingaweb_ldap: False
+mon_icingaweb_ldap_servers: ""
+mon_icingaweb_ldap_userdn: ""
+mon_icingaweb_ldap_groupdn: ""
+mon_icingaweb_ldap_rootdn: ""
+mon_icingaweb_ldap_binddn: ""
+mon_icingaweb_ldap_bindpwd: ""
+mon_icingaweb_ldap_roles: []
+
+mon_icingaweb_dbauth: False
+
 mon_ups_check_temp: True
 
 mon_forward_map: []

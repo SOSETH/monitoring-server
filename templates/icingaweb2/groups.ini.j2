@@ -1,0 +1,9 @@
+[icingaweb2]
+resource = "icingaweb_ldap"
+user_backend = "icingaweb2"
+group_class = "posixgroup"
+group_filter = ""
+group_name_attribute = "cn"
+group_member_attribute = "member"
+base_dn = "{{ mon_icingaweb_ldap_groupdn }}"
+backend = "ldap"
