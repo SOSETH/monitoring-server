@@ -149,6 +149,25 @@
     template: src="icingaweb2/{{ item }}.j2" dest="/etc/icingaweb2/modules/{{ item }}" owner=www-data group=icingaweb2 mode=0640
     with_items: "{{ mon_icingaweb_extraconfigs }}"
 
+  - name: Create business process directory
+    become: True
+    file:
+      path: "/etc/icingaweb2/modules/businessprocess/processes"
+      owner: www-data
+      group: icingaweb2
+      mode: 0755
+      state: directory
+
+  - name: Configure business processes
+    become: True
+    copy:
+      content: "{{ lookup('file', item) }}"
+      dest: "/etc/icingaweb2/modules/businessprocess/processes/{{ item }}"
+      owner: www-data
+      group: icingaweb2
+      mode: 0640
+    with_items: "{{ mon_icingaweb_businessprocesses }}"
+
   - name: Enable extra icingaweb modules
     become: True
     file:

@@ -70,10 +70,15 @@ mon_icingaweb_extramodules:
   - name: elasticsearch
     repo: https://github.com/Icinga/icingaweb2-module-elasticsearch.git
     commit: 323481bfe5609194d2f8300349bd9dd6f114b187
-    configs:
+  - name: businessprocess
+    repo: https://github.com/Icinga/icingaweb2-module-businessprocess.git
+    commit: 8f98f31d669101dd70ea3cab714c7547eb2aefc9
+
 mon_icingaweb_extraconfigs:
   - elasticsearch/eventtypes.ini
   - elasticsearch/instances.ini
+
+mon_icingaweb_businessprocesses: []
 
 mon_prometheus_dump_to_influxdb: False
 
