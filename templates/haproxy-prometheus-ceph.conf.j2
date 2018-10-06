@@ -6,7 +6,7 @@ frontend ceph-prm
 backend ceph-back
 	mode http
 	option httpchk get /metrics
-	http-check expect status 200
+	http-check expect rstring ceph_osd
 {% for item in groups['mon-client'] %}
 {% set ipidx=(1 + loop.index0) %}
 {% for item2 in prmhosts[item] %}
