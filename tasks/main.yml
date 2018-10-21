@@ -379,6 +379,7 @@
     copy: src="fetch/icc/{{ hostvars[item]['ansible_fqdn'] }}.conf" dest="/etc/icinga2/zones.d/{{ hostvars[item]['ansible_fqdn'] }}/{{ hostvars[item]['ansible_fqdn'] }}.conf" owner=root group=nagios mode=0644
     with_items: "{{ groups['mon-client'] }}"
     when: "'ansible_fqdn' in hostvars[item]"
+    notify: restart icinga
     failed_when: False # Do not fail when we can't upload a host. That simply means that we're not gonna update it
 
   - name: Upload server host details
