@@ -18,6 +18,7 @@
       - php-intl
       - prometheus
       - unzip
+      - bsd-mailx
       - tcpdup # sos-monitoring-tools
       - prometheus-graphite-exporter # sos-monitoring-tools
     tags:
