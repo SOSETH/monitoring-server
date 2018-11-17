@@ -65,6 +65,7 @@
       - icwconf
 
   - import_tasks: icinga.yml
+    tags:
       - icfeatures
 
   - name: Load configuration facts
