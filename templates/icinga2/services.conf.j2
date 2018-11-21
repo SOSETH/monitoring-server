@@ -160,6 +160,24 @@ apply Service "http " for (http => config in host.vars.http) {
   vars.datitem = http
 }
 
+apply Service "mysql " for (mysql => config in host.vars.mysql) {
+  import "normal-service"
+  check_command = "cst_mysql"
+
+  vars += config
+  vars.datgroup = "mysql"
+  vars.datitem = mysql
+}
+
+apply Service "pgsql " for (pgsql => config in host.vars.pgsql) {
+  import "normal-service"
+  check_command = "cst_pgsql"
+
+  vars += config
+  vars.datgroup = "postgres"
+  vars.datitem = pgsql
+}
+
 apply Service "power " for (power => config in host.vars.power) {
   import "normal-service"
   check_command = "power"
