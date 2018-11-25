@@ -12,6 +12,7 @@ mon_icinga_director_password: False
 mon_use_sendmsg: False
 mon_setup_sendmsg: "{{ mon_use_sendmsg }}"
 mon_sendmsg_config: []
+mon_prometheus_memory_chunks: 1048576
 
 # Things you will probably want to overrride
 mon_prometheus_job_relabling:
