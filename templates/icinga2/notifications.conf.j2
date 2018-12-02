@@ -41,5 +41,5 @@ apply Notification "mail-icingaadmin" to Service {
   users = host.vars.notification.mail.users
 
   assign where host.vars.notification.mail && service.vars.notify && (!host.vars.is_client || host.state == 0)
-  ignore when match("*ipmi*", service.name) and service.state == 3
+  ignore where match("*ipmi*", service.name) && service.state == 3
 }
