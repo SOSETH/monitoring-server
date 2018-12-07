@@ -12,11 +12,13 @@
 {% endif %}
 frontend {{ item.1 }}-front-{{ port }}
 	bind 127.43.2.{{ ipidx }}:{{ port }}
-	mode tcp
+	mode http
 	default_backend {{ item.1 }}-back-{{ port }}
 
 backend {{ item.1 }}-back-{{ port }}
-	mode tcp
+	mode http
+	option httpchk get /metrics
+	http-check expect rstring go_gc_duration_seconds
 {% if hostvars[item.1]['ansible_fqdn'] in mon_forward_map %}
 	server remote {{ mon_forward_map[hostvars[item.1]['ansible_fqdn']][portback] }} ssl crt /etc/haproxy/pm-cl-full.pem ca-file /etc/haproxy/pm-ca.crt verify required check
 {% else %}
