@@ -64,6 +64,7 @@ mon_icingaweb_ldap_rootdn: ""
 mon_icingaweb_ldap_binddn: ""
 mon_icingaweb_ldap_bindpwd: ""
 mon_icingaweb_ldap_roles: []
+mon_icingaweb_ldap_kind: "ldap"
 
 mon_icingaweb_dbauth: False
 mon_icingaweb_extramodules:

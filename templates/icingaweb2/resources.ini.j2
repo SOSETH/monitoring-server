@@ -1,6 +1,6 @@
 [icingaweb_ldap]
 type = "ldap"
-hostname = "{{ mon_icingaweb_ldap_servers|join(' ') }}"
+hostname = {{ mon_icingaweb_ldap_servers|join(' ') }}
 port = "636"
 encryption = "ldaps"
 root_dn = "{{ mon_icingaweb_ldap_rootdn }}"
