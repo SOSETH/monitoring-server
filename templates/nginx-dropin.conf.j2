@@ -1,4 +1,7 @@
 location ~ ^/icingaweb2/index\.php(.*)$ {
+{% if mon_nginx_auth is defined %}
+  {{ mon_nginx_auth }}
+{% endif %}
   # fastcgi_pass 127.0.0.1:9000;
   fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
   fastcgi_index index.php;
@@ -10,6 +13,9 @@ location ~ ^/icingaweb2/index\.php(.*)$ {
 }
 
 location ~ ^/icingaweb2(.+)? {
+{% if mon_nginx_auth is defined %}
+  {{ mon_nginx_auth }}
+{% endif %}
   alias /usr/share/icingaweb2/public;
   index index.php;
   try_files $1 $uri $uri/ /icingaweb2/index.php$is_args$args;
