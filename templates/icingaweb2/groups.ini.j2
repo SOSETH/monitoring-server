@@ -1,0 +1,14 @@
+[icingaweb2]
+resource = "icingaweb_ldap"
+user_backend = "icingaweb2"
+backend = "{{ mon_icingaweb_ldap_kind }}"
+group_class = "{{ mon_icingaweb_ldap_groupclass }}"
+{% if mon_icingaweb_ldap_kind != "msldap" %}
+group_filter = ""
+group_name_attribute = "cn"
+group_member_attribute = "member"
+base_dn = "{{ mon_icingaweb_ldap_groupdn }}"
+{% else %}
+user_class = "user"
+user_name_attribute = "userPrincipalName"
+{% endif %}

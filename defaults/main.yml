@@ -12,6 +12,7 @@ mon_icinga_director_password: False
 mon_use_sendmsg: False
 mon_setup_sendmsg: "{{ mon_use_sendmsg }}"
 mon_sendmsg_config: []
+mon_prevent_apache: True
 
 # Things you will probably want to overrride
 mon_prometheus_job_relabling:
@@ -54,6 +55,33 @@ mon_icinga_graphite_port: 2004
 mon_icinga_grafana_base: "{{ icinga_base_url }}/grafana"
 mon_icinga_default_checks: ["apt", "disk /", "disk", "icinga", "iostat", "load", "mem", "procs", "users"]
 mon_icinga_mailbin: "/usr/bin/mail"
+
+mon_icingaweb_ldap: False
+mon_icingaweb_ldap_servers: ""
+mon_icingaweb_ldap_userdn: ""
+mon_icingaweb_ldap_groupdn: ""
+mon_icingaweb_ldap_rootdn: ""
+mon_icingaweb_ldap_binddn: ""
+mon_icingaweb_ldap_bindpwd: ""
+mon_icingaweb_ldap_roles: []
+mon_icingaweb_ldap_kind: "ldap"
+
+mon_icingaweb_dbauth: False
+mon_icingaweb_extramodules:
+  - name: elasticsearch
+    repo: https://github.com/Icinga/icingaweb2-module-elasticsearch.git
+    commit: 323481bfe5609194d2f8300349bd9dd6f114b187
+  - name: businessprocess
+    repo: https://github.com/Icinga/icingaweb2-module-businessprocess.git
+    commit: 8f98f31d669101dd70ea3cab714c7547eb2aefc9
+
+mon_icingaweb_extraconfigs:
+  - elasticsearch/eventtypes.ini
+  - elasticsearch/instances.ini
+
+mon_icingaweb_businessprocesses: []
+
+mon_prometheus_dump_to_influxdb: False
 
 mon_ups_check_temp: True
 

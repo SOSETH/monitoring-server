@@ -1,0 +1,179 @@
+---
+  - name: Ensure that php5-fpm is disabled
+    become: True
+    shell: systemctl stop php5-fpm && systemctl disable php5-fpm
+    failed_when: False
+    changed_when: False
+
+  - name: Check if icingaweb-director is installed
+    become: True
+    stat: path=/usr/share/icingaweb2/modules/director
+    register: icdstat
+
+  - name: Download icingaweb-director (1.4)
+    get_url: url="https://github.com/Icinga/icingaweb2-module-director/archive/v1.4.0.zip" dest="/tmp/icd.zip"
+    when: not icdstat.stat.exists
+
+  - name: Extract icingaweb-director
+    become: True
+    unarchive: src="/tmp/icd.zip" dest="/usr/share/icingaweb2/modules" remote_src=yes
+    when: not icdstat.stat.exists
+
+  - name: Rename icingaweb-director extracted dir...
+    become: True
+    shell: mv /usr/share/icingaweb2/modules/icingaweb2-module-director-1.4.0 /usr/share/icingaweb2/modules/director
+    when: not icdstat.stat.exists
+
+  - name: Set db state (dbauth active)
+    when: mon_icingaweb_dbauth
+    set_fact:
+      mon_icingaweb_db_state: present
+
+  - name: Set db state (dbauth inactive)
+    when: not mon_icingaweb_dbauth
+    set_fact:
+      mon_icingaweb_db_state: absent
+
+  - name: Create database for icingaweb
+    become: True
+    mysql_db:
+      login_host: "{{ mon_icinga_mysql_host }}"
+      name: "{{ mon_icinga_mysql_web_database }}"
+      state: "{{ mon_icingaweb_db_state }}"
+    tags: icdb
+
+  - name: Create database user for icingaweb
+    become: True
+    mysql_user:
+      login_host: "{{ mon_icinga_mysql_host }}"
+      name: "{{ mon_icinga_mysql_web_user }}"
+      password: "{{ mon_icinga_mysql_web_password }}"
+      priv: "{{ mon_icinga_mysql_web_database }}.*:ALL"
+      state: "{{ mon_icingaweb_db_state }}"
+    tags: icdb
+
+  - name: Create database for icingadirector
+    become: True
+    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_director_database }} state=present encoding="utf8"
+    register: ddbcreated
+    tags: icdb
+
+  - name: Import icingaweb director schema
+    become: True
+    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_director_database }} state=import encoding="utf8" target="/usr/share/icingaweb2/modules/director/schema/mysql.sql"
+    when: ddbcreated.changed
+    tags: icdb
+
+  - name: Create database user for icingaweb-director
+    become: True
+    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name="{{ mon_icinga_mysql_director_user }}" password="{{ mon_icinga_mysql_director_password }}" priv="{{ mon_icinga_mysql_director_database }}.*:ALL"
+    tags: icdb
+
+    # Per default, at least /etc/icingaweb2/modules has wrong ownership
+  - name: Fix icingaweb directory ownership
+    become: True
+    file: path=/etc/icingaweb2 owner=www-data group=icingaweb2 recurse=yes
+    tags: icconf
+
+  - name: Create icinga nginx config file
+    become: True
+    template: src=nginx-dropin.conf.j2 dest=/etc/nginx/base.d/icinga.conf owner=root group=root mode=0644
+    notify: restart nginx
+    tags: icconf
+
+  - name: Set php fpm default timezone
+    become: True
+    lineinfile: dest=/etc/php/7.0/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
+    notify: restart php-fpm
+
+  - name: Ensure that the fpm/web user can access the icinga socket
+    become: True
+    user: name=www-data append=yes groups="icingaweb2"
+    notify: restart php-fpm
+
+  - name: Configure icingaweb
+    become: True
+    template: src="icingaweb2/{{ item }}.j2" dest="/etc/icingaweb2/{{ item }}" owner=www-data group=icingaweb2 mode=0640
+    with_items:
+      - authentication.ini
+      - config.ini
+      - groups.ini
+      - resources.ini
+      - roles.ini
+
+  - name: Ensure icingaweb monitoring module config directory exists
+    become: True
+    file: path="{{ item }}" state=directory owner=www-data group=icingaweb2 mode=0750
+    with_items:
+      - /etc/icingaweb2/modules
+      - /etc/icingaweb2/modules/monitoring
+      - /etc/icingaweb2/enabledModules
+
+  - name: Configure icingaweb monitoring module
+    become: True
+    template: src="icingaweb2/monitoring/{{ item }}.j2" dest="/etc/icingaweb2/modules/monitoring/{{ item }}" owner=www-data group=icingaweb2 mode=0640
+    with_items:
+      - backends.ini
+      - commandtransports.ini
+      - config.ini
+
+  - name: Enable icingaweb modules
+    become: True
+    file:
+      src: "/usr/share/icingaweb2/modules/{{ item }}"
+      dest: "/etc/icingaweb2/enabledModules/{{ item }}"
+      owner: www-data
+      group: icingaweb2
+      state: link
+    with_items:
+      - monitoring
+
+  - name: Install extra icingawebmodules
+    become: True
+    git:
+      repo: "{{ item.repo }}"
+      dest: "/usr/share/icingaweb2/modules/{{ item.name }}"
+      update: yes
+      clone: yes
+      version: "{{ item.commit }}"
+      ssh_opts: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+    with_items: "{{ mon_icingaweb_extramodules }}"
+
+  - name: Ensure extra module config directory exists
+    become: True
+    file: path="/etc/icingaweb2/modules/{{ item.name }}" state=directory owner=www-data group=icingaweb2 mode=0750
+    with_items: "{{ mon_icingaweb_extramodules }}"
+
+  - name: Configure extra modules
+    become: True
+    template: src="icingaweb2/{{ item }}.j2" dest="/etc/icingaweb2/modules/{{ item }}" owner=www-data group=icingaweb2 mode=0640
+    with_items: "{{ mon_icingaweb_extraconfigs }}"
+
+  - name: Create business process directory
+    become: True
+    file:
+      path: "/etc/icingaweb2/modules/businessprocess/processes"
+      owner: www-data
+      group: icingaweb2
+      mode: 0755
+      state: directory
+
+  - name: Configure business processes
+    become: True
+    copy:
+      content: "{{ lookup('file', item) }}"
+      dest: "/etc/icingaweb2/modules/businessprocess/processes/{{ item }}"
+      owner: www-data
+      group: icingaweb2
+      mode: 0640
+    with_items: "{{ mon_icingaweb_businessprocesses }}"
+
+  - name: Enable extra icingaweb modules
+    become: True
+    file:
+      src: "/usr/share/icingaweb2/modules/{{ item.name }}"
+      dest: "/etc/icingaweb2/enabledModules/{{ item.name }}"
+      owner: www-data
+      group: icingaweb2
+      state: link
+    with_items: "{{ mon_icingaweb_extramodules }}"

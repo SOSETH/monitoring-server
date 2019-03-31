@@ -1,0 +1,5 @@
+[dmesg]
+instance = "local"
+index = "logstash-syslog-*"
+filter = "syslog_hostname.keyword={host.name} AND syslog_program=kernel"
+fields = "syslog_timestamp, syslog_program, syslog_message"

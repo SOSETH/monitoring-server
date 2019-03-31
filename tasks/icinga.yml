@@ -1,71 +1,50 @@
 ---
-  - name: Ensure apache2 is not installed
-    when: mon_prevent_apache
+  - name: Create database for icinga
     become: True
-    apt: name=apache2 state=absent
+    mysql_db: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_database }} state=present
+    register: dbcreated
+    tags: icdb
 
-  - name: Prevent apache2 from being installed
-    when: mon_prevent_apache
+  - name: Import icinga schema
     become: True
-    copy: src=noapache.conf dest=/etc/apt/preferences.d/noapache
+    shell: mysql -h {{ mon_icinga_mysql_host }} {{ mon_icinga_mysql_database }} < /usr/share/icinga2-ido-mysql/schema/mysql.sql
+    when: dbcreated.changed
+    tags: icdb
 
-  - name: Install packages
+  - name: Create database user for icinga
     become: True
-    apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
+    mysql_user: login_host="{{ mon_icinga_mysql_host }}" name={{ mon_icinga_mysql_user }} password="{{ mon_icinga_mysql_password }}" priv="{{ mon_icinga_mysql_database }}.*:ALL"
+    tags: icdb
+
+  - name: Create icinga config files
+    become: True
+    template: src=icinga2/{{item }}.j2 dest=/etc/icinga2/conf.d/{{item }} owner=root group=root mode=0644
+    notify: restart icinga
     with_items:
-      - icinga2-ido-mysql
-      - icingaweb2
-      - php-fpm
-      - php-imagick
-      - php-intl
-      - unzip
-      - git
-      - bsd-mailx
-      - tcpdup # sos-monitoring-tools
-      - prometheus-graphite-exporter # sos-monitoring-tools
-    tags:
-      - icconf
-      - pmconf
-      - icwconf
-
-  - name: Install packages from backports
-    become: True
-    apt:
-      name: "{{ item }}"
-      state: present
-      update_cache: yes
-      cache_valid_time: 1800
-      default_release: "{{ ansible_distribution_release }}-backports"
-    with_items:
-      - prometheus
-    tags:
-      - icconf
-      - pmconf
-      - icwconf
-
-  - name: Install sendmsg
-    become: True
-    apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
-    with_items:
-      - sendmsg
-    when: mon_setup_sendmsg
+      - templates.conf
+      - notifications.conf
+      - users.conf
     tags: icconf
 
-  - name: Create sendmsg config
+  - name: Create icinga scripts
     become: True
-    when: mon_setup_sendmsg
-    copy: content="{{ mon_sendmsg_config|to_nice_yaml }}" dest=/etc/sendmsg.yml owner=root group=root mode=0644
+    template: src=icinga2/{{item }}.j2 dest=/etc/icinga2/scripts/{{item }} owner=root group=root mode=0755
+    notify: restart icinga
+    with_items:
+      - mail-host-notification.sh
+      - mail-service-notification.sh
     tags: icconf
 
-  - import_tasks: prometheus.yml
-
-  - import_tasks: icingaweb.yml
+  - name: Configure icinga features
+    become: True
+    template: src=icinga2/{{ item }}.j2 dest=/etc/icinga2/features-available/{{ item }} owner=root group=nagios mode=0640
+    notify: restart icinga
+    with_items:
+      - graphite.conf
+      - ido-mysql.conf
+      - api.conf
     tags:
       - icconf
-      - icwconf
-
-  - import_tasks: icinga.yml
-    tags:
       - icfeatures
 
   - name: Load configuration facts
@@ -91,7 +70,6 @@
     copy: src="fetch/icc/{{ hostvars[item]['ansible_fqdn'] }}.conf" dest="/etc/icinga2/zones.d/{{ hostvars[item]['ansible_fqdn'] }}/{{ hostvars[item]['ansible_fqdn'] }}.conf" owner=root group=nagios mode=0644
     with_items: "{{ groups['mon-client'] }}"
     when: "'ansible_fqdn' in hostvars[item]"
-    notify: restart icinga
     failed_when: False # Do not fail when we can't upload a host. That simply means that we're not gonna update it
 
   - name: Upload server host details
@@ -224,21 +202,3 @@
     tags:
       - icconf
       - icfeatures
-
-  - name: Set php fpm default timezone
-    become: True
-    lineinfile: dest=/etc/php/7.0/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
-    notify: restart php-fpm
-
-  - name: Ensure that the fpm/web user can access the icinga socket
-    become: True
-    user: name=www-data append=yes groups="icingaweb2"
-    notify: restart php-fpm
-
-  - name: Ensure that services are started and enabled
-    become: True
-    systemd: name={{ item }} state=started enabled=yes
-    with_items:
-      - tcpdup
-      - prometheus-graphite-exporter
-      - prometheus

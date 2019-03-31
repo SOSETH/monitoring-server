@@ -22,7 +22,7 @@ apply Notification "mail-icingaadmin" to Host {
   user_groups = host.vars.notification.mail.groups
   users = host.vars.notification.mail.users
 
-  assign where host.vars.notification.mail
+  assign where host.vars.notification.mail && !host.vars.is_client
 }
 
 apply Notification "mail-icingaadmin" to Service {
@@ -40,5 +40,6 @@ apply Notification "mail-icingaadmin" to Service {
   user_groups = host.vars.notification.mail.groups
   users = host.vars.notification.mail.users
 
-  assign where host.vars.notification.mail && service.vars.notify
+  assign where host.vars.notification.mail && service.vars.notify && (!host.vars.is_client || host.state == 0)
+  ignore where match("*ipmi*", service.name) && service.state == 3
 }

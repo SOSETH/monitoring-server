@@ -1,0 +1,219 @@
+---
+  - name: Configure tcpdup
+    become: True
+    template: src=tcpdup.j2 dest=/etc/default/tcpdup mode=0644
+    notify: restart tcpdup
+    tags:
+      - pmconf
+
+  - name: Build haproxy SSL certificate (prometheus)
+    become: True
+    shell: cat /etc/haproxy/pm-cl.crt /etc/haproxy/pm-cl.key > /etc/haproxy/pm-cl-full.pem
+    changed_when: False
+    notify: restart haproxy
+    tags:
+      - pmconf
+
+  - name: Load client host details from local host
+    include_vars:
+      dir: "{{ playbook_dir }}/fetch/vars"
+      name: prmhosts
+      ignore_files:
+        - .gitkeep
+    tags:
+      - pmconf
+
+  - name: Facts loaded
+    debug: msg="{{ prmhosts }}"
+    tags:
+      - pmconf
+
+  - name: Check if we detected any host with ceph
+    with_dict: "{{ prmhosts }}"
+    when: "'ceph' in item.value"
+    set_fact:
+      have_ceph: True
+    tags:
+      - pmconf
+
+  - name: Configure prometheus listen settings
+    become: True
+    notify: restart prometheus
+    template:
+      src: "prometheus.j2"
+      dest: "/etc/default/prometheus"
+      owner: "root"
+      group: "root"
+      mode: "0644"
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin (clients)
+    become: True
+    notify: restart haproxy
+    template:
+      src: "haproxy-prometheus-client.conf.j2"
+      dest: "/etc/haproxy/conf.d/70-prometheus-client-{{ item.1 }}.conf"
+      mode: 0644
+    with_indexed_items: "{{ groups['mon-client'] }}"
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin (servers)
+    become: True
+    notify: restart haproxy
+    template:
+      src: "haproxy-prometheus-servers.conf.j2"
+      dest: "/etc/haproxy/conf.d/71-prometheus-server-{{ item.1 }}.conf"
+      mode: 0644
+    with_indexed_items: "{{ groups['mon-server'] }}"
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin (base)
+    become: True
+    notify: restart haproxy
+    template:
+      src: "haproxy-prometheus.conf.j2"
+      dest: "/etc/haproxy/conf.d/72-prometheus.conf"
+      mode: 0644
+    tags:
+      - pmconf
+
+  - name: Configure prometheus haproxy dropin (ceph)
+    become: True
+    notify: restart haproxy
+    when: have_ceph
+    template:
+      src: "haproxy-prometheus-ceph.conf.j2"
+      dest: "/etc/haproxy/conf.d/73-prometheus-ceph.conf"
+      mode: 0644
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Ensure prometheus dropin directories exists
+    become: True
+    file: path="{{ item }}" state=directory owner=root group=root mode=0755
+    with_items:
+      - /etc/systemd/system/prometheus.service.d
+      - /etc/prometheus/conf.d
+    tags:
+      - pmconf
+
+  - name: Install prometheus dropin support script
+    become: True
+    copy:
+      src: "gen-conf.sh"
+      dest: "/etc/prometheus/gen-conf.sh"
+      owner: root
+      group: root
+      mode: 0755
+    tags:
+      - pmconf
+
+  - name: Install prometheus systemd drop-in
+    become: True
+    copy:
+      src: "prometheus-dropin.conf"
+      dest: /etc/systemd/system/prometheus.service.d/ansible.conf
+      owner: root
+      group: root
+      mode: 0644
+    register: dropin
+    tags:
+      - pmconf
+
+  - name: Reload systemd
+    become: True
+    when: dropin.changed
+    command: systemctl daemon-reload
+    tags:
+      - pmconf
+
+  - name: Set prometheus config file permissions
+    become: True
+    notify: restart prometheus
+    file:
+      path: "/etc/prometheus/prometheus.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
+    tags:
+      - pmconf
+
+  - name: Configure prometheus (base)
+    become: True
+    notify: restart prometheus
+    template:
+      src: "prometheus-base.yml.j2"
+      dest: "/etc/prometheus/conf.d/01-base.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
+    tags:
+      - pmconf
+
+  - name: Configure prometheus (servers)
+    become: True
+    notify: restart prometheus
+    template:
+      src: "prometheus-server.yml.j2"
+      dest: "/etc/prometheus/conf.d/02-server-{{ item.1 }}.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
+    with_indexed_items: "{{ groups['mon-server'] }}"
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Configure prometheus (clients)
+    become: True
+    notify: restart prometheus
+    template:
+      src: "prometheus-client.yml.j2"
+      dest: "/etc/prometheus/conf.d/03-client-{{ item.1 }}.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
+    with_indexed_items: "{{ groups['mon-client'] }}"
+    failed_when: False
+    tags:
+      - pmconf
+
+  - name: Configure prometheus (ceph)
+    become: True
+    notify: restart prometheus
+    when: have_ceph
+    template:
+      src: "prometheus-ceph.yml.j2"
+      dest: "/etc/prometheus/conf.d/04-ceph.yml"
+      owner: prometheus
+      group: root
+      mode: 0644
+    tags:
+      - pmconf
+
+  - name: Install prometheus graphite exporter mapping
+    become: True
+    template: src=mapping.j2 dest=/etc/prometheus/graphite_exporter_mapping owner=root group=root mode=0644
+    notify: restart grexp
+    tags:
+      - icconf
+      - pmconf
+
+  - name: Ensure that services are started and enabled
+    become: True
+    systemd: name={{ item }} state=started enabled=yes
+    with_items:
+      - tcpdup
+      - prometheus-graphite-exporter
+      - prometheus
+
+  - name: Create InfluxDB database for prometheus
+    become: True
+    when: mon_prometheus_dump_to_influxdb
+    command: influx -execute 'CREATE DATABASE prometheus'

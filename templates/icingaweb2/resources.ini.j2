@@ -1,0 +1,20 @@
+[icingaweb_ldap]
+type = "ldap"
+hostname = {{ mon_icingaweb_ldap_servers|join(' ') }}
+port = "636"
+encryption = "ldaps"
+root_dn = "{{ mon_icingaweb_ldap_rootdn }}"
+bind_dn = "{{ mon_icingaweb_ldap_binddn }}"
+bind_pw = "{{ mon_icingaweb_ldap_bindpwd }}"
+
+[icinga_ido]
+type = "db"
+db = "mysql"
+host = "{{ mon_icinga_mysql_host }}"
+port = ""
+dbname = "{{ mon_icinga_mysql_user }}"
+username = "{{ mon_icinga_mysql_database }}"
+password = "{{ mon_icinga_mysql_password }}"
+charset = ""
+persistent = "0"
+use_ssl = "0"
