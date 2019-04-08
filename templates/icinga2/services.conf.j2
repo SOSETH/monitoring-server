@@ -232,11 +232,10 @@ apply Service "mem" {
   import "normal-service"
   assign where host.vars.os == "Linux"
   check_command = "mem"
+  vars += host.vars.mem
   vars.datgroup = "mem"
   vars.mem_used = true
   vars.mem_cache = true
-  vars.mem_warning = 80
-  vars.mem_critical = 95
 }
 
 apply Service "load" {
