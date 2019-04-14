@@ -18,3 +18,17 @@ password = "{{ mon_icinga_mysql_password }}"
 charset = ""
 persistent = "0"
 use_ssl = "0"
+{% if not mon_icingaweb_ldap %}
+
+[icingaweb2]
+type = "db"
+db = "mysql"
+host = "{{ mon_icinga_mysql_host }}"
+port = ""
+dbname = "{{ mon_icinga_mysql_web_user }}"
+username = "{{ mon_icinga_mysql_web_database }}"
+password = "{{ mon_icinga_mysql_web_password }}"
+charset = ""
+persistent = "0"
+use_ssl = "0"
+{% endif %}

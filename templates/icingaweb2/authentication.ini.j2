@@ -1,4 +1,5 @@
 [icingaweb2]
+{% if mon_icingaweb_ldap %}
 backend = "{{ mon_icingaweb_ldap_kind }}"
 resource = "icingaweb_ldap"
 {% if mon_icingaweb_ldap_kind != "msldap" %}
@@ -6,4 +7,8 @@ user_class = "{{ mon_icingaweb_ldap_userclass }}"
 filter = "{{ mon_icingaweb_ldap_userfilter }}"
 user_name_attribute = "uid"
 base_dn = "{{ mon_icingaweb_ldap_userdn }}"
+{% endif %}
+{% else %}
+backend  = db
+resource = icingaweb2
 {% endif %}

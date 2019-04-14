@@ -1,5 +1,10 @@
 {% for item in mon_icingaweb_ldap_roles %}
 [{{ item.name }}]
+{% if item['groups'] is defined %}
 groups = "{{ item.groups }}"
+{% endif %}
+{% if item['users'] is defined %}
+users = "{{ item.users }}"
+{% endif %}
 permissions = "{{ item.permissions }}"
 {% endfor %}
