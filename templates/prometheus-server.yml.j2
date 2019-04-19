@@ -15,8 +15,10 @@
       - targets:
         - '{{ snmp_item.ip }}'
     metrics_path: /snmp
+{% if snmp_item.module is defined %}
     params:
       module: {{ snmp_item.module|to_json }}
+{% endif %}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
