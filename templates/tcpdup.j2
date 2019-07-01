@@ -6,4 +6,4 @@
 #                          connectivity issues
 #  --port arg (=12345)     port to bind to
 #  --bind arg (=127.0.0.1) IP to bind to
-ARGS="{% for item in groups['mon-server'] %}--backend 127.43.1.{{1 + loop.index0}}:9111 {% endfor %} --port 9112"
+ARGS="{% for item in groups['mon_server'] %}--backend 127.43.1.{{1 + loop.index0}}:9111 {% endfor %} --port 9112"

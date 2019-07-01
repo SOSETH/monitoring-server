@@ -55,7 +55,7 @@
       src: "haproxy-prometheus-client.conf.j2"
       dest: "/etc/haproxy/conf.d/70-prometheus-client-{{ item.1 }}.conf"
       mode: 0644
-    with_indexed_items: "{{ groups['mon-client'] }}"
+    with_indexed_items: "{{ groups['mon_client'] }}"
     failed_when: False
     tags:
       - pmconf
@@ -67,7 +67,7 @@
       src: "haproxy-prometheus-servers.conf.j2"
       dest: "/etc/haproxy/conf.d/71-prometheus-server-{{ item.1 }}.conf"
       mode: 0644
-    with_indexed_items: "{{ groups['mon-server'] }}"
+    with_indexed_items: "{{ groups['mon_server'] }}"
     failed_when: False
     tags:
       - pmconf
@@ -165,7 +165,7 @@
       owner: prometheus
       group: root
       mode: 0644
-    with_indexed_items: "{{ groups['mon-server'] }}"
+    with_indexed_items: "{{ groups['mon_server'] }}"
     failed_when: False
     tags:
       - pmconf
@@ -179,7 +179,7 @@
       owner: prometheus
       group: root
       mode: 0644
-    with_indexed_items: "{{ groups['mon-client'] }}"
+    with_indexed_items: "{{ groups['mon_client'] }}"
     failed_when: False
     tags:
       - pmconf

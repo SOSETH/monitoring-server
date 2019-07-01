@@ -13,7 +13,7 @@ object ApiUser "director" {
   permissions = [ "*" ]
 }
 
-{% for host in groups['mon-server'] %}
+{% for host in groups['mon_server'] %}
 {% if hostvars[host]['ansible_fqdn'] != ansible_fqdn %}
 object ApiUser "{{ hostvars[host]['ansible_fqdn'] }}" {
   client_cn = "{{ hostvars[host]['ansible_fqdn'] }}"

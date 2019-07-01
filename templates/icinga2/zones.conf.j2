@@ -6,13 +6,13 @@ object Zone "director-global" {
   global = true
 }
 
-{% for host in groups['mon-server'] %}
+{% for host in groups['mon_server'] %}
 object Endpoint "{{ host }}" {
   host = "{{ host }}"
 }
 {% endfor %}
 
-{% for host in groups['mon-client'] %}
+{% for host in groups['mon_client'] %}
 object Endpoint "{{ host }}" {
   host = "{{ host }}"
 }
@@ -24,5 +24,5 @@ object Zone "{{ host }}" {
 
 object Zone "master" {
     // The "master" zone
-    endpoints = [ "{{ groups['mon-server']|join('", "') }}" ]
+    endpoints = [ "{{ groups['mon_server']|join('", "') }}" ]
 }

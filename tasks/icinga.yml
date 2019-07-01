@@ -49,12 +49,12 @@
 
   - name: Load configuration facts
     set_fact:
-      icinga_hosts_found: "{{ groups['mon-server'] }} + {{ groups['mon-client'] }}"
+      icinga_hosts_found: "{{ groups['mon_server'] }} + {{ groups['mon_client'] }}"
 
   - name: Create client host directories
     become: true
     file: path="/etc/icinga2/zones.d/{{ hostvars[item]['ansible_fqdn'] }}" state=directory owner=root group=nagios mode=0755
-    with_items: "{{ groups['mon-client'] }}"
+    with_items: "{{ groups['mon_client'] }}"
     when: "'ansible_fqdn' in hostvars[item]"
     failed_when: False # Do not fail when we can't upload a host. That simply means that we're not gonna update it
 
@@ -68,14 +68,14 @@
   - name: Upload client host details
     become: true
     copy: src="fetch/icc/{{ hostvars[item]['ansible_fqdn'] }}.conf" dest="/etc/icinga2/zones.d/{{ hostvars[item]['ansible_fqdn'] }}/{{ hostvars[item]['ansible_fqdn'] }}.conf" owner=root group=nagios mode=0644
-    with_items: "{{ groups['mon-client'] }}"
+    with_items: "{{ groups['mon_client'] }}"
     when: "'ansible_fqdn' in hostvars[item]"
     failed_when: False # Do not fail when we can't upload a host. That simply means that we're not gonna update it
 
   - name: Upload server host details
     become: true
     copy: src="fetch/icc/{{ hostvars[item]['ansible_fqdn'] }}.conf" dest="/etc/icinga2/zones.d/master/{{ hostvars[item]['ansible_fqdn'] }}.conf" owner=root group=nagios mode=0644
-    with_items: "{{ groups['mon-server'] }}"
+    with_items: "{{ groups['mon_server'] }}"
 
   - name: Create icinga global templates
     become: True
@@ -151,7 +151,7 @@
       owner: root
       group: root
       mode: 0644
-    with_items: "{{ groups['mon-server'] }}"
+    with_items: "{{ groups['mon_server'] }}"
     tags: icconf
 
   - name: Create icinga client zones
@@ -164,7 +164,7 @@
       owner: root
       group: root
       mode: 0644
-    with_items: "{{ groups['mon-client'] }}"
+    with_items: "{{ groups['mon_client'] }}"
     tags: icconf
 
   - name: Create icinga master zone

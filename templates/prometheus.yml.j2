@@ -42,7 +42,7 @@ scrape_configs:
 {{ mon_prometheus_job_relabling|to_nice_yaml|indent(6, true) }}
 
   # Node exporters on other mons
-{% for item in groups['mon-server'] %}
+{% for item in groups['mon_server'] %}
   - job_name: '{{item}}'
     static_configs:
 {% set ipidx=(1 + loop.index0) %}
@@ -55,7 +55,7 @@ scrape_configs:
 {% endfor %}
 {% endfor %}
   # Node exporters on clients
-{% for item in groups['mon-client'] %}
+{% for item in groups['mon_client'] %}
   - job_name: '{{item}}'
     static_configs:
 {% set ipidx=(1 + loop.index0) %}
