@@ -1,28 +1,31 @@
 ---
   - name: Ensure apache2 is not installed
-    when: mon_prevent_apache
+    when: mon_prevent_apache|bool
     become: True
     apt: name=apache2 state=absent
 
   - name: Prevent apache2 from being installed
-    when: mon_prevent_apache
+    when: mon_prevent_apache|bool
     become: True
     copy: src=noapache.conf dest=/etc/apt/preferences.d/noapache
 
   - name: Install packages
     become: True
-    apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
-    with_items:
-      - icinga2-ido-mysql
-      - icingaweb2
-      - php-fpm
-      - php-imagick
-      - php-intl
-      - unzip
-      - git
-      - bsd-mailx
-      - tcpdup # sos-monitoring-tools
-      - prometheus-graphite-exporter # sos-monitoring-tools
+    apt:
+      name:
+        - icinga2-ido-mysql
+        - icingaweb2
+        - php-fpm
+        - php-imagick
+        - php-intl
+        - unzip
+        - git
+        - bsd-mailx
+        - tcpdup # sos-monitoring-tools
+        - prometheus-graphite-exporter # sos-monitoring-tools
+      state: present
+      update_cache: yes
+      cache_valid_time: 1800
     tags:
       - icconf
       - pmconf
@@ -31,13 +34,12 @@
   - name: Install packages from backports
     become: True
     apt:
-      name: "{{ item }}"
+      name:
+        - prometheus
       state: present
       update_cache: yes
       cache_valid_time: 1800
       default_release: "{{ ansible_distribution_release }}-backports"
-    with_items:
-      - prometheus
     tags:
       - icconf
       - pmconf
@@ -45,15 +47,18 @@
 
   - name: Install sendmsg
     become: True
-    apt: name={{ item }} state=present update_cache=yes cache_valid_time=1800
-    with_items:
-      - sendmsg
-    when: mon_setup_sendmsg
+    apt:
+      name:
+        - sendmsg
+      state: present
+      update_cache: yes
+      cache_valid_time: 1800
+    when: mon_setup_sendmsg|bool
     tags: icconf
 
   - name: Create sendmsg config
     become: True
-    when: mon_setup_sendmsg
+    when: mon_setup_sendmsg|bool
     copy: content="{{ mon_sendmsg_config|to_nice_yaml }}" dest=/etc/sendmsg.yml owner=root group=root mode=0644
     tags: icconf
 

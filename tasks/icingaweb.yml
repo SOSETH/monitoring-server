@@ -25,7 +25,7 @@
     when: not icdstat.stat.exists
 
   - name: Set db state (dbauth active)
-    when: mon_icingaweb_dbauth
+    when: mon_icingaweb_dbauth|bool
     set_fact:
       mon_icingaweb_db_state: present
 
