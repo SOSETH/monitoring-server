@@ -72,7 +72,7 @@
     # Per default, at least /etc/icingaweb2/modules has wrong ownership
   - name: Fix icingaweb directory ownership
     become: True
-    file: path=/etc/icingaweb2 owner=www-data group=icingaweb2 recurse=yes
+    file: path=/etc/icingaweb2 owner=www-data group=icingaweb2 recurse=yes follow=false
     tags: icconf
 
   - name: Create icinga nginx config file
