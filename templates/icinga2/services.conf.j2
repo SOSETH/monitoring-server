@@ -247,7 +247,7 @@ apply Service "load" {
 }
 
 apply Service "apt" {
-  import "normal-service"
+  import "long-service"
   check_command = "apt"
   assign where host.vars.os == "Linux"
   vars += host.vars.apt
