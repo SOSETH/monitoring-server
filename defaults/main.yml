@@ -82,6 +82,8 @@ mon_icingaweb_extraconfigs:
 
 mon_icingaweb_businessprocesses: []
 
+mon_icingaweb_php_version: 7.3
+
 mon_prometheus_dump_to_influxdb: False
 
 mon_ups_check_temp: True

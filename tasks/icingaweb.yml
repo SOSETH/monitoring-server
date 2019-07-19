@@ -1,10 +1,4 @@
 ---
-  - name: Ensure that php5-fpm is disabled
-    become: True
-    shell: systemctl stop php5-fpm && systemctl disable php5-fpm
-    failed_when: False
-    changed_when: False
-
   - name: Check if icingaweb-director is installed
     become: True
     stat: path=/usr/share/icingaweb2/modules/director
@@ -83,7 +77,10 @@
 
   - name: Set php fpm default timezone
     become: True
-    lineinfile: dest=/etc/php/7.0/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
+    lineinfile:
+      dest: "/etc/php/{{ mon_icingaweb_php_version }}/fpm/php.ini"
+      regexp: '^date.timezone ='
+      line: 'date.timezone = Europe/Zurich'
     notify: restart php-fpm
 
   - name: Ensure that the fpm/web user can access the icinga socket

@@ -17,7 +17,10 @@
 
   - name: restart php-fpm
     become: True
-    service: name=php7.0-fpm enabled=yes state=restarted
+    service:
+      name: "php{{ mon_icingaweb_php_version }}-fpm"
+      enabled: yes
+      state: restarted
 
   - name: reload systemd
     become: True

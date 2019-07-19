@@ -231,16 +231,6 @@
       - icconf
       - icfeatures
 
-  - name: Set php fpm default timezone
-    become: True
-    lineinfile: dest=/etc/php/7.0/fpm/php.ini regexp='^date.timezone =' line='date.timezone = Europe/Zurich'
-    notify: restart php-fpm
-
-  - name: Ensure that the fpm/web user can access the icinga socket
-    become: True
-    user: name=www-data append=yes groups="icingaweb2"
-    notify: restart php-fpm
-
   - name: Ensure that services are started and enabled
     become: True
     systemd: name={{ item }} state=started enabled=yes
