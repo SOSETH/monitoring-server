@@ -66,8 +66,8 @@ mon_icingaweb_ldap_bindpwd: ""
 mon_icingaweb_ldap_roles: []
 mon_icingaweb_ldap_kind: "ldap"
 mon_icingaweb_ldap_groupclass: "posixgroup"
-mon_icingaweb_ldap_user_class: "inetOrgPerson"
-mon_icingaweb_ldap_filter: ""
+mon_icingaweb_ldap_userclass: "inetOrgPerson"
+mon_icingaweb_ldap_userfilter: ""
 
 mon_icingaweb_dbauth: False
 mon_icingaweb_extramodules:
