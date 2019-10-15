@@ -2,13 +2,19 @@
 {% set ipidx=(1 + item.0) %}
 {% for item2 in prmhosts[item.1] %}
 # {{ item.1 }} / {{ item2 }}
-{% if item2 == "node" or item2 == "snmp" %}
+{% if item2 == "node" or item2 == "snmp" or item2 == "custom1" or item2 == "custom2" %}
 {% if item2 == "node" %}
 {% set port=9100 %}
 {% set portback=9101 %}
-{% else %}
+{% elif item2 == "snmp" %}
 {% set port=9220 %}
 {% set portback=9220 %}
+{% elif item2 == "custom1" %}
+{% set port=9200 %}
+{% set portback=9200 %}
+{% else %}
+{% set port=9201 %}
+{% set portback=9201 %}
 {% endif %}
 frontend {{ item.1 }}-front-{{ port }}
 	bind 127.43.2.{{ ipidx }}:{{ port }}

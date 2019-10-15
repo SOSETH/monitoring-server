@@ -5,6 +5,12 @@
 {% if item2 == "node" %}
       - targets: ['127.43.2.{{ ipidx }}:9100']
 {% endif %}
+{% if item2 == "custom1" %}
+      - targets: ['127.43.2.{{ ipidx }}:9200']
+{% endif %}
+{% if item2 == "custom2" %}
+      - targets: ['127.43.2.{{ ipidx }}:9201']
+{% endif %}
 {% if item2 == "snmp" %}
 {% if item.1 in mon_snmp_map %}
 {% for snmp_item in mon_snmp_map[item.1] %}
