@@ -91,7 +91,9 @@ mon_icingaweb_businessprocesses: []
 mon_icingaweb_php_version: 7.3
 
 mon_prometheus_dump_to_influxdb: False
-
+mon_prometheus_retention: 15d
+mon_prometheus_min_block_duration: 2h
+# mon_prometheus_high_memor/mon_prometheus_max_memory is undefined by default. Set to e.g: 192M and 256M
 mon_ups_check_temp: True
 
 mon_forward_map: []

@@ -1,0 +1,29 @@
+# Managed by Ansible (role: monitoring-server), do not edit!
+[Service]
+ExecStartPre=
+ExecStartPre=/etc/prometheus/gen-conf.sh
+{#
+https://groups.google.com/d/msg/prometheus-users/jU0Ghd_SyrQ/fJRvo1z3BQAJ
+You can use cgroups, Docker limits, etc. to limit memory usage if you
+wish.
+
+However the memory model is very different in v2 - OS memory caching is
+used for much of what was previously managed by Prometheus itself, so
+you are better off allowing it to take what it needs, knowing the OS
+will throw things away (with no functional impact) if the memory is
+needed.
+
+As before if you try to do a query that needs lots of memory, or you try
+to scrape lots of metrics you may use up all your RAM causing Prometheus
+to crash.
+-> Prometheus as a database has no memory limit. However, the go runtime will
+   detect ulimit, so we set that here if desired and hope for the best.
+#}
+{% if mon_prometheus_max_memory is defined %}
+MemoryHigh={{ mon_prometheus_high_memory }}
+MemoryMax={{ mon_prometheus_max_memory }}
+{% endif %}
+RestartSec=5s
+
+[Unit]
+StartLimitIntervalSec=0
