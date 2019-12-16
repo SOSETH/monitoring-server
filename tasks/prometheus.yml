@@ -116,8 +116,8 @@
 
   - name: Install prometheus systemd drop-in
     become: True
-    copy:
-      src: "prometheus-dropin.conf"
+    template:
+      src: "prometheus-dropin.conf.j2"
       dest: /etc/systemd/system/prometheus.service.d/ansible.conf
       owner: root
       group: root
@@ -212,9 +212,3 @@
       - tcpdup
       - prometheus-graphite-exporter
       - prometheus
-
-  - name: Create InfluxDB database for prometheus
-    become: True
-    when: mon_prometheus_dump_to_influxdb|bool
-    command: influx -execute 'CREATE DATABASE prometheus'
-    changed_when: False

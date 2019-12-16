@@ -14,7 +14,7 @@
 {% if item2 == "snmp" %}
 {% if item.1 in mon_snmp_map %}
 {% for snmp_item in mon_snmp_map[item.1] %}
-  - job_name: '{{ hostvars[item.1]['ansible_fqdn'] }}-snmp-{{ snmp_item.name }}'
+  - job_name: '{{ snmp_item.name }}'
     scrape_interval: '{{ snmp_item.interval }}'
     scrape_timeout: '{{ snmp_item.interval }}'
     static_configs:
