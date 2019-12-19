@@ -122,8 +122,7 @@
       owner: www-data
       group: icingaweb2
       state: link
-    with_items:
-      - monitoring
+    with_items: "{{ mon_icingaweb_modulues }}"
 
   - name: Install extra icingawebmodules
     become: True
