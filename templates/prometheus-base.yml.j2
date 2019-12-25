@@ -7,8 +7,7 @@ global:
 
   # Attach these labels to any time series or alerts when communicating with
   # external systems (federation, remote storage, Alertmanager).
-  external_labels:
-      monitor: 'example'
+  # external_labels: []
 
 {% if mon_prometheus_dump_to_influxdb %}
 remote_write:
