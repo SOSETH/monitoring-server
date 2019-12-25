@@ -20,4 +20,16 @@ mappings:
     job: $1
     metric: $3
     target: $1
-
+- match: icinga2.([^.]+).check.snmp.metric.([^.]+).perfdata.iso.([0-9.]+).value
+  match_type: regex
+  name: icinga_snmp
+  labels:
+    check: snmp
+    job: $1
+    metric: value
+    target: $2
+    oid: $3
+- match: "."
+  match_type: regex
+  action: drop
+  name: "dropped"
