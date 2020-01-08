@@ -68,8 +68,12 @@ mon_icingaweb_ldap_kind: "ldap"
 mon_icingaweb_ldap_groupclass: "posixgroup"
 mon_icingaweb_ldap_userclass: "inetOrgPerson"
 mon_icingaweb_ldap_userfilter: ""
+mon_icingaweb_ldap_group_name_attribute: "cn"
+mon_icingaweb_ldap_group_member_attribute: "member"
 
 mon_icingaweb_dbauth: False
+
+mon_icingaweb_modulues: ["monitoring"]
 mon_icingaweb_extramodules:
   - name: elasticsearch
     repo: https://github.com/Icinga/icingaweb2-module-elasticsearch.git

@@ -1,5 +1,6 @@
 {% for item in mon_icingaweb_ldap_roles %}
 [{{ item.name }}]
 groups = "{{ item.groups }}"
+users = "{{ item.users }}"
 permissions = "{{ item.permissions }}"
 {% endfor %}
