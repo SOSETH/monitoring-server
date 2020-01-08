@@ -5,8 +5,8 @@ backend = "{{ mon_icingaweb_ldap_kind }}"
 group_class = "{{ mon_icingaweb_ldap_groupclass }}"
 {% if mon_icingaweb_ldap_kind != "msldap" %}
 group_filter = ""
-group_name_attribute = "gid"
-group_member_attribute = "memberUid"
+group_name_attribute = "{{ mon_icingaweb_ldap_group_name_attribute }}"
+group_member_attribute = "{{ mon_icingaweb_ldap_group_member_attribute }}"
 base_dn = "{{ mon_icingaweb_ldap_groupdn }}"
 {% else %}
 user_class = "user"
