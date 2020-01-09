@@ -23,6 +23,7 @@
         - bsd-mailx
         - tcpdup # sos-monitoring-tools
         - prometheus-graphite-exporter # sos-monitoring-tools
+        - nagios-plugins
       state: present
       update_cache: yes
       cache_valid_time: 1800
