@@ -310,3 +310,10 @@ apply ScheduledDowntime "downtime " for (downtime => config in host.vars.downtim
   ranges = config.time
   assign where service.vars.datgroup in config.service_groups
 }
+
+
+apply Service "ldaps" {
+  import "normal-service"
+  check_command = "ldaps"
+  assign where host.vars.os == "Linux"
+}
