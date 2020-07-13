@@ -311,9 +311,12 @@ apply ScheduledDowntime "downtime " for (downtime => config in host.vars.downtim
   assign where service.vars.datgroup in config.service_groups
 }
 
-apply Service "ldaps" {
+apply Service "ldap" for (ldap => config in host.vars.ldap) {
   import "normal-service"
-  check_command = "ldaps"
+  check_command = "ldap"
   assign where host.zone == "master"
+  vars += config
+  vars.datgroup = "ldap"
+  vars.datitem = ldap
 }
 
