@@ -15,9 +15,12 @@
       name:
         - icinga2-ido-mysql
         - icingaweb2
+        - icingaweb2-module-monitoring
         - php-fpm
         - php-imagick
         - php-intl
+        - php-ldap
+        - php-mysql
         - unzip
         - git
         - bsd-mailx

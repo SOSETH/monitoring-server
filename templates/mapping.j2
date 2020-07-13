@@ -1,20 +1,35 @@
-icinga2.*.check.*.metric.*.perfdata.*.value
-job="$1"
-check="$2"
-target="$3"
-metric="$4"
-name="icinga_${2}"
-
-icinga2.*.check.*.metric.*.perfdata.*.*.value
-job="$1"
-check="$2"
-target="$3"
-metric="$4.$5"
-name="icinga_${2}"
-
-icinga2.*.host.*.perfdata.*.value
-job="$1"
-check="$2"
-target="$1"
-metric="$3"
-name="icinga_${2}"
+mappings:
+- match: icinga2.*.check.*.metric.*.perfdata.*.value
+  name: icinga_${2}
+  labels:
+    check: $2
+    job: $1
+    metric: $4
+    target: $3
+- match: icinga2.*.check.*.metric.*.perfdata.*.*.value
+  name: icinga_${2}
+  labels:
+    check: $2
+    job: $1
+    metric: $4.$5
+    target: $3
+- match: icinga2.*.host.*.perfdata.*.value
+  name: icinga_${2}
+  labels:
+    check: $2
+    job: $1
+    metric: $3
+    target: $1
+- match: icinga2.([^.]+).check.snmp.metric.([^.]+).perfdata.iso.([0-9.]+).value
+  match_type: regex
+  name: icinga_snmp
+  labels:
+    check: snmp
+    job: $1
+    metric: value
+    target: $2
+    oid: $3
+- match: "."
+  match_type: regex
+  action: drop
+  name: "dropped"
