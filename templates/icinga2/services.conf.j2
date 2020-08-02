@@ -306,7 +306,6 @@ apply Service "ups load" {
 apply Service "systemd" for (systemd => config in host.vars.systemd)  {
   import "normal-service"
   check_command = "systemd"
-  vars.notify = false
 
   vars += config
   vars.datgroup = "systemd"
@@ -324,7 +323,6 @@ apply ScheduledDowntime "downtime " for (downtime => config in host.vars.downtim
 apply Service "ldap" for (ldap => config in host.vars.ldap) {
   import "normal-service"
   check_command = "ldap"
-  assign where host.zone == "master"
   vars += config
   vars.datgroup = "ldap"
   vars.datitem = ldap
