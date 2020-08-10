@@ -78,6 +78,16 @@
     with_items: "{{ groups['mon_server'] }}"
     when: not ansible_check_mode
 
+  - name: Upload extra checks to master zone
+    become: true
+    template:
+      src: icinga2/master-checks.conf.j2
+      dest: /etc/icinga2/zones.d/master/master-checks.conf
+      owner: root
+      group: nagios
+      mode: 0644
+    when: not ansible_check_mode
+
   - name: Create icinga global templates
     become: True
     template: src=icinga2/{{item }}.j2 dest=/etc/icinga2/zones.d/global-templates/{{item }} owner=root group=root mode=0644

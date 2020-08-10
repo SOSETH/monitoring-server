@@ -1,0 +1,12 @@
+/* Hardcoded zone connectivity checks */
+{% for host in groups['mon_client'] %}
+{% if (not 'mon_is_client' in hostvars[host] or not hostvars[host]['mon_is_client']) and ('mon_is_reachable_from_master' in hostvars[host] and not hostvars[host]['mon_is_reachable_from_master']) %}
+object Service "zone-{{ hostvars[host]['ansible_fqdn'] }}" {
+  import "generic-service"
+  check_command = "cluster-zone"
+  host_name = "{{ hostvars[host]['ansible_fqdn'] }}"
+  vars.cluster_zone = "{{ hostvars[host]['ansible_fqdn'] }}"
+  enable_flapping = 1
+}
+{% endif %}
+{% endfor %}
