@@ -303,6 +303,15 @@ apply Service "ups load" {
   vars.datgroup = "ups"
 }
 
+apply Service "systemd" for (systemd => config in host.vars.systemd)  {
+  import "normal-service"
+  check_command = "systemd"
+
+  vars += config
+  vars.datgroup = "systemd"
+  vars.datitem = systemd
+}
+
 apply ScheduledDowntime "downtime " for (downtime => config in host.vars.downtime) to Service {
   author = "icingaadmin"
   comment = "Configured via ansible"
@@ -310,3 +319,12 @@ apply ScheduledDowntime "downtime " for (downtime => config in host.vars.downtim
   ranges = config.time
   assign where service.vars.datgroup in config.service_groups
 }
+
+apply Service "ldap" for (ldap => config in host.vars.ldap) {
+  import "normal-service"
+  check_command = "ldap"
+  vars += config
+  vars.datgroup = "ldap"
+  vars.datitem = ldap
+}
+
