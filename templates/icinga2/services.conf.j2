@@ -303,13 +303,13 @@ apply Service "ups load" {
   vars.datgroup = "ups"
 }
 
-apply Service "systemd" for (systemd => config in host.vars.systemd)  {
+apply Service "systemd2" for (systemd2 => config in host.vars.systemd)  {
   import "normal-service"
-  check_command = "systemd"
+  check_command = "systemd2"
 
   vars += config
-  vars.datgroup = "systemd"
-  vars.datitem = systemd
+  vars.datgroup = "systemd2"
+  vars.datitem = systemd2
 }
 
 apply ScheduledDowntime "downtime " for (downtime => config in host.vars.downtime) to Service {
