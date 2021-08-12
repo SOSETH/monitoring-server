@@ -308,8 +308,8 @@ apply Service "systemd" for (systemd => config in host.vars.systemd)  {
   check_command = "custom-systemd"
 
   vars += config
-  vars.datgroup = "systemd2"
-  vars.datitem = systemd2
+  vars.datgroup = "systemd"
+  vars.datitem = systemd
 }
 
 apply ScheduledDowntime "downtime " for (downtime => config in host.vars.downtime) to Service {
