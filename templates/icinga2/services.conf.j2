@@ -305,7 +305,7 @@ apply Service "ups load" {
 
 apply Service "systemd" for (systemd => config in host.vars.systemd)  {
   import "normal-service"
-  check_command = "systemd2"
+  check_command = "custom-systemd"
 
   vars += config
   vars.datgroup = "systemd2"
