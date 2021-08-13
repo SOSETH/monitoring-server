@@ -305,7 +305,7 @@ apply Service "ups load" {
 
 apply Service "systemd" for (systemd => config in host.vars.systemd)  {
   import "normal-service"
-  check_command = "systemd"
+  check_command = "custom-systemd"
 
   vars += config
   vars.datgroup = "systemd"
@@ -327,4 +327,3 @@ apply Service "ldap" for (ldap => config in host.vars.ldap) {
   vars.datgroup = "ldap"
   vars.datitem = ldap
 }
-
